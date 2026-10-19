@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publicador Suplevet</title>
+<style>
+:root{--navy:#253C61;--celeste:#99D3DA;--naranja:#EA8C43;--fondo:#F4F7F9;--tarjeta:#fff;--texto:#1d2733;--suave:#66727f;--borde:#dde3e8;--ok:#2e9d62;--mal:#d0453a;--aviso:#c98a12}
+@media (prefers-color-scheme:dark){:root{--fondo:#121821;--tarjeta:#1b2430;--texto:#e6ecf2;--suave:#93a1b0;--borde:#2c3846}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--fondo);color:var(--texto)}
+header{background:var(--navy);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+.modo{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.modo.sim{background:var(--celeste);color:var(--navy)}.modo.vivo{background:var(--naranja);color:#fff}
+.ver{opacity:.7;font-size:12px;margin-left:auto}
+nav{display:flex;gap:4px;padding:0 20px;background:var(--navy)}
+nav button{background:none;border:0;color:#cfe3ea;padding:10px 14px;font:inherit;cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:#fff;border-color:var(--celeste)}
+main{padding:20px;max-width:1300px;margin:auto}
+.caja{background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:14px}
+.fila{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input,select,textarea{font:inherit;color:inherit;background:var(--fondo);border:1px solid var(--borde);border-radius:6px;padding:6px 8px}
+textarea{width:100%;min-height:92px;resize:vertical}
+button.b{font:inherit;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;background:var(--navy);color:#fff}
+button.b.sec{background:transparent;color:var(--texto);border:1px solid var(--borde)}
+button.b.nar{background:var(--naranja)}button.b.mal{background:var(--mal)}
+button.b:disabled{opacity:.5;cursor:default}
+h2{font-size:16px;margin:22px 0 10px}
+.dia{display:flex;align-items:center;gap:10px;margin:24px 0 10px}.dia h2{margin:0}
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.pieza{background:var(--tarjeta);border:1px solid var(--borde);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.pieza.aprob{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok)}
+.miniatura{display:flex;gap:10px;padding:10px;align-items:flex-start}
+.miniatura img,.miniatura video{width:72px;height:128px;object-fit:cover;border-radius:6px;background:#000;flex:none}
+.cod{font-weight:600;word-break:break-all}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--fondo);border:1px solid var(--borde);margin:2px 2px 0 0}
+.chip.TOFU{background:#e3f4f6;color:#1d6b75;border-color:#bfe3e8}.chip.MOFU{background:#e7ebf3;color:var(--navy)}.chip.BOFU{background:#fbeadb;color:#a75a1c;border-color:#f3cfb1}
+.est{font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px}
+.est.pendiente{background:#eef1f4;color:#5b6773}.est.publicado{background:#dff3e8;color:var(--ok)}.est.simulado{background:#e3f4f6;color:#1d6b75}
+.est.error{background:#fbe2df;color:var(--mal)}.est.publicando{background:#fff3d6;color:var(--aviso)}
+.redes{border-top:1px solid var(--borde);padding:8px 10px;display:none}
+.pieza.abierta .redes{display:block}
+.red{margin-bottom:10px}.red label{display:flex;align-items:center;gap:6px;font-weight:600;margin-bottom:4px}
+.err{color:var(--mal);font-size:12px;word-break:break-word}
+.avisos{color:var(--aviso);font-size:12px;margin:4px 0 0;padding-left:16px}
+.pie{margin-top:auto;padding:8px 10px;border-top:1px solid var(--borde);display:flex;gap:6px;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--borde)}th{color:var(--suave);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+pre{white-space:pre-wrap;font-size:12px;max-height:60vh;overflow:auto}
+.suave{color:var(--suave);font-size:12px}
+.lista-piezas{max-height:260px;overflow:auto;border:1px solid var(--borde);border-radius:6px;padding:6px}
+.lista-piezas label{display:block;padding:2px 0}
+#toast{position:fixed;bottom:18px;right:18px;background:var(--navy);color:#fff;padding:10px 14px;border-radius:8px;display:none;max-width:420px}
+.aviso-act{background:var(--naranja);color:#fff;padding:8px 20px;display:none;gap:10px;align-items:center}
+</style>
+</head>
+<body>
+<header><h1>Publicador Suplevet</h1><span id="modo" class="modo sim">SIMULACIÓN</span><span class="ver" id="ver"></span></header>
+<div class="aviso-act" id="act"><span id="act-txt"></span><button class="b sec" style="color:#fff;border-color:#fff" onclick="actualizar()">Actualizar ahora</button></div>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="toast"></div>
+<script>
+const TABS=[["cola","Cola orgánica"],["pauta","Pauta"],["metricas","Métricas"],["conexiones","Conexiones"],["registro","Registro"]];
+let E=null,tab="cola",abiertas=new Set(),editando=false;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const arc=r=>"/archivo?ruta="+encodeURIComponent(r);
+function toast(t){const e=$("#toast");e.textContent=t;e.style.display="block";clearTimeout(e._t);e._t=setTimeout(()=>e.style.display="none",4000)}
+async function api(u,d){const r=await fetch(u,d===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});const j=await r.json();if(j.error){toast("⚠ "+j.error);throw j}return j}
+async function cargar(){E=await api("/api/estado");pintar()}
+function pintar(){
+  const sim=E.config.simular;$("#modo").className="modo "+(sim?"sim":"vivo");$("#modo").textContent=sim?"SIMULACIÓN":"EN VIVO";
+  $("#ver").textContent="v"+(E.version||"");
+  $("#nav").innerHTML=TABS.map(([k,t])=>`<button class="${k==tab?"on":""}" onclick="ir('${k}')">${t}</button>`).join("");
+  ({cola,pauta,metricas,conexiones,registro})[tab]();
+}
+function ir(k){tab=k;pintar()}
+
+/* ---------- Cola ---------- */
+function cola(){
+  const ps=[...E.cola.publicaciones].sort((a,b)=>(a.fecha||"").localeCompare(b.fecha||""));
+  const dias={};ps.forEach(p=>(dias[(p.fecha||"sin fecha").slice(0,10)]??=[]).push(p));
+  let h=`<div class="caja"><b>Traer piezas</b><div class="suave">Pega la ruta de V.FINALES o de un paquete.json de la semana.</div>
+  <div class="fila" style="margin-top:6px"><input id="ruta" style="flex:1;min-width:260px" placeholder="F:\\...\\V.FINALES"><button class="b" onclick="importar()">Importar</button></div></div>`;
+  if(!ps.length)h+=`<p class="suave">La cola está vacía.</p>`;
+  for(const [d,lista] of Object.entries(dias)){
+    const fecha=d.length==10?new Date(d+"T12:00").toLocaleDateString("es-PE",{weekday:"long",day:"numeric",month:"long"}):d;
+    const faltan=lista.filter(p=>!p.aprobado).length;
+    h+=`<div class="dia"><h2>${esc(fecha)}</h2><span class="suave">${lista.length} piezas</span>${faltan?`<button class="b sec" onclick="aprobarDia('${d}')">Aprobar el día (${faltan})</button>`:`<span class="est publicado">día aprobado</span>`}</div><div class="rejilla">${lista.map(tarjeta).join("")}</div>`;
+  }
+  $("#main").innerHTML=h;
+}
+function tarjeta(p){
+  const img=p.portada?`<img src="${arc(p.portada)}">`:(p.tipo=="video"?`<video src="${arc(p.archivos[0])}" muted preload="metadata"></video>`:`<img src="${arc(p.archivos[0])}">`);
+  const estados=Object.entries(p.redes).filter(([,r])=>r.activa).map(([k,r])=>`<span class="est ${r.estado}" title="${esc(r.error||r.url||"")}">${k.slice(0,2).toUpperCase()} ${r.estado}</span>`).join(" ");
+  const redes=Object.entries(p.redes).map(([k,r])=>`<div class="red"><label><input type="checkbox" ${r.activa?"checked":""} data-p="${p.id}" data-r="${k}" data-c="activa"> ${k} <span class="est ${r.estado}">${r.estado}</span>
+   ${r.url?`<a href="${esc(r.url)}" target="_blank" class="suave">ver</a>`:""}${r.estado=="error"?`<button class="b sec" onclick="publicar('${p.id}','${k}')">Reintentar</button>`:""}</label>
+   ${k=="youtube"?`<input style="width:100%;margin-bottom:4px" placeholder="Título" value="${esc(r.titulo)}" data-p="${p.id}" data-r="${k}" data-c="titulo">`:""}
+   <textarea data-p="${p.id}" data-r="${k}" data-c="copy">${esc(r.copy)}</textarea>
+   ${r.error?`<div class="err">${esc(r.error)}</div>`:""}${r.nota?`<div class="suave">${esc(r.nota)}</div>`:""}</div>`).join("");
+  return `<div class="pieza ${p.aprobado?"aprob":""} ${abiertas.has(p.id)?"abierta":""}" id="p-${p.id}">
+   <div class="miniatura">${img}<div style="flex:1;min-width:0"><div class="cod">${esc(p.codigo)}</div>
+   <div>${p.nivel?`<span class="chip ${p.nivel}">${p.nivel}</span>`:""}${p.publico?`<span class="chip">${p.publico}</span>`:""}<span class="chip">${p.tipo}</span>${p.dolor?`<span class="chip">${p.dolor}</span>`:""}</div>
+   <input type="datetime-local" value="${esc(p.fecha)}" style="margin-top:6px" onchange="cambiar('${p.id}',{fecha:this.value})">
+   <div style="margin-top:4px">${estados}</div>
+   ${p.avisos?.length?`<ul class="avisos">${p.avisos.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}</div></div>
+   <div class="redes">${redes}<button class="b" onclick="guardarCopies('${p.id}')">Guardar copies</button></div>
+   <div class="pie"><button class="b sec" onclick="abrir('${p.id}')">${abiertas.has(p.id)?"Cerrar":"Copies"}</button>
+   ${p.aprobado?`<button class="b sec" onclick="cambiar('${p.id}',{aprobado:false})">Quitar aprobación</button>`:`<button class="b" onclick="cambiar('${p.id}',{aprobado:true})">Aprobar</button>`}
+   <button class="b nar" onclick="publicar('${p.id}')">Publicar ya</button>
+   <button class="b sec" style="margin-left:auto" onclick="borrar('${p.id}')">Quitar</button></div></div>`;
+}
+function abrir(id){abiertas.has(id)?abiertas.delete(id):abiertas.add(id);pintar()}
+async function importar(){const r=await api("/api/importar",{ruta:$("#ruta").value});toast(`Entraron ${r.nuevas} piezas (${r.repetidas} ya estaban)`);cargar()}
+async function cambiar(id,c){await api(`/api/pub/${id}/cambiar`,c);cargar()}
+async function aprobarDia(d){const r=await api("/api/aprobar_dia",{dia:d});toast(`Aprobadas ${r.aprobadas}. Salen solas a su hora.`+(r.trabadas.length?` Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""));cargar()}
+async function guardarCopies(id){
+  const redes={};document.querySelectorAll(`[data-p="${id}"]`).forEach(e=>{(redes[e.dataset.r]??={})[e.dataset.c]=e.type=="checkbox"?e.checked:e.value});
+  await api(`/api/pub/${id}/cambiar`,{redes});toast("Copies guardados");cargar()}
+async function publicar(id,red){
+  if(!E.config.simular&&!confirm("Esto sube la pieza a las redes ahora mismo. ¿Seguro?"))return;
+  const r=await api(`/api/pub/${id}/publicar`,red?{red}:{});toast("Subiendo a: "+r.publicando.join(", "));setTimeout(cargar,1500)}
+async function borrar(id){if(confirm("¿Quitar esta pieza de la cola? (no borra el video)")){await api(`/api/pub/${id}/borrar`,{});cargar()}}
+
+/* ---------- Pauta ---------- */
+function pauta(){
+  const ps=E.cola.publicaciones;
+  const pub=p=>Object.values(p.redes).some(r=>r.estado=="publicado"||r.estado=="simulado");
+  const hoy=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,16);
+  let h=`<div class="caja"><b>Nueva campaña en Meta (Instagram + Facebook)</b>
+  <div class="suave">Se crea en pausa. No gasta nada hasta que aprietes «Activar». Si la pieza ya salió orgánica, se impulsa esa misma publicación.</div>
+  <div class="fila" style="margin-top:8px">
+   <input id="c-nombre" placeholder="Nombre (ej. S03 picazón · BOFU)" style="flex:1;min-width:220px">
+   <select id="c-obj"><option value="reproducciones">Reproducciones (ThruPlay)</option><option value="alcance">Alcance</option><option value="trafico">Tráfico al enlace</option><option value="mensajes">Mensajes a WhatsApp</option></select>
+   <label>S/ por día <input id="c-pres" type="number" min="5" value="20" style="width:80px"></label></div>
+  <div class="fila" style="margin-top:8px"><label>Desde <input id="c-ini" type="datetime-local" value="${hoy}"></label><label>Hasta <input id="c-fin" type="datetime-local"></label>
+   <label>Edad <input id="c-emin" type="number" value="${E.config.pauta.edad_min}" style="width:60px"> a <input id="c-emax" type="number" value="${E.config.pauta.edad_max}" style="width:60px"></label>
+   <label><input type="checkbox" id="c-ig" checked> Instagram</label><label><input type="checkbox" id="c-fb" checked> Facebook</label></div>
+  <div style="margin-top:8px"><b>Piezas</b> <span class="suave">(las ya publicadas van primero)</span><div class="lista-piezas">
+   ${[...ps].sort((a,b)=>pub(b)-pub(a)).map(p=>`<label><input type="checkbox" class="c-pz" value="${p.id}"> ${esc(p.codigo)} ${p.nivel?`<span class="chip ${p.nivel}">${p.nivel}</span>`:""}${pub(p)?'<span class="est publicado">publicada</span>':""}</label>`).join("")||'<span class="suave">Primero importa piezas en la cola.</span>'}
+  </div></div><button class="b" style="margin-top:8px" onclick="nuevaCampana()">Guardar campaña</button></div>`;
+  for(const c of [...E.pauta.campanas].reverse()){
+    const res=c.resultados?.anuncios||[];
+    h+=`<div class="caja"><div class="fila"><b>${esc(c.nombre)}</b><span class="est ${({activa:"publicado",error:"error",creada:"simulado",pausada:"pendiente"})[c.estado]||"pendiente"}">${c.estado}</span>
+     <span class="suave">${c.objetivo} · S/ ${c.presupuesto_diario}/día · ${c.piezas.length} anuncios · ${esc(c.inicio)}${c.fin?" → "+esc(c.fin):""}</span>
+     <span style="margin-left:auto" class="fila">
+     ${["borrador","error"].includes(c.estado)?`<button class="b" onclick="accion('${c.id}','crear')">Crear en Meta (en pausa)</button>`:""}
+     ${["creada","pausada"].includes(c.estado)?`<button class="b nar" onclick="activar('${c.id}',${c.presupuesto_diario})">Activar</button>`:""}
+     ${c.estado=="activa"?`<button class="b mal" onclick="accion('${c.id}','pausar')">Pausar</button>`:""}
+     ${c.meta?.campaign_id?`<button class="b sec" onclick="accion('${c.id}','resultados')">Ver resultados</button>`:""}
+     ${c.estado!="activa"?`<button class="b sec" onclick="if(confirm('¿Borrar del publicador? (en Meta queda pausada)'))accion('${c.id}','borrar')">Borrar</button>`:""}</span></div>
+     ${c.error?`<div class="err">${esc(c.error)}</div>`:""}
+     ${res.length?`<table style="margin-top:8px"><tr><th>Anuncio</th><th>Gasto S/</th><th>Impresiones</th><th>Alcance</th><th>Clics</th><th>CTR %</th><th>ThruPlays</th><th>Mensajes</th><th>Costo/ThruPlay</th></tr>
+      ${res.sort((a,b)=>b.thruplays-a.thruplays).map(f=>`<tr><td>${esc(f.codigo)}</td><td class="n">${f.gasto.toFixed(2)}</td><td class="n">${f.impresiones}</td><td class="n">${f.alcance}</td><td class="n">${f.clics}</td><td class="n">${f.ctr.toFixed(2)}</td><td class="n">${f.thruplays}</td><td class="n">${f.mensajes}</td><td class="n">${f.thruplays?(f.gasto/f.thruplays).toFixed(3):"–"}</td></tr>`).join("")}</table>
+      <div class="suave">Actualizado ${esc(c.resultados.actualizado)}</div>`:""}</div>`;
+  }
+  $("#main").innerHTML=h;
+}
+async function nuevaCampana(){
+  const piezas=[...document.querySelectorAll(".c-pz:checked")].map(e=>e.value);
+  const plataformas=[$("#c-ig").checked&&"instagram",$("#c-fb").checked&&"facebook"].filter(Boolean);
+  await api("/api/pauta/nueva",{nombre:$("#c-nombre").value,objetivo:$("#c-obj").value,presupuesto_diario:+$("#c-pres").value,
+   inicio:$("#c-ini").value,fin:$("#c-fin").value||null,edad_min:+$("#c-emin").value,edad_max:+$("#c-emax").value,plataformas,piezas});
+  toast("Campaña guardada. Ahora «Crear en Meta».");cargar()}
+async function accion(id,a){toast("Trabajando…");await api(`/api/pauta/${id}/${a}`,{});toast("Listo");cargar()}
+async function activar(id,s){
+  if(!confirm(`Vas a empezar a gastar S/ ${s} por día en Meta Ads.\n\n¿Activar la campaña?`))return;
+  await api(`/api/pauta/${id}/activar`,{confirmado:true});toast("Campaña activa");cargar()}
+
+/* ---------- Métricas ---------- */
+function metricas(){
+  let h=`<div class="caja fila"><b>Métricas orgánicas</b><span class="suave">Se guardan en metricas/&lt;semana&gt;.json para el estratega.</span><button class="b" style="margin-left:auto" onclick="recoger()">Recoger ahora</button></div>`;
+  const ms=Object.entries(E.metricas).filter(([k])=>!k.endsWith("_pauta"));
+  if(!ms.length)h+=`<p class="suave">Todavía no hay métricas. Se recogen de lo que ya está publicado.</p>`;
+  for(const [s,d] of ms.reverse()){
+    const filas=[...(d.piezas||[])].sort((a,b)=>(b.vistas||0)-(a.vistas||0));
+    h+=`<h2>${esc(s)} <span class="suave">${esc(d.recogido||"")}</span></h2><div class="caja"><table><tr><th>Pieza</th><th>Red</th><th>Nivel</th><th>Vistas</th><th>Me gusta</th><th>Coment.</th><th>Guardados</th><th>Compart.</th><th>Seguidores</th></tr>
+    ${filas.map(f=>`<tr><td>${esc(f.codigo)}</td><td>${f.red}</td><td>${f.nivel?`<span class="chip ${f.nivel}">${f.nivel}</span>`:""}</td><td class="n">${f.vistas??0}</td><td class="n">${f.me_gusta??0}</td><td class="n">${f.comentarios??0}</td><td class="n">${f.guardados??0}</td><td class="n">${f.compartidos??0}</td><td class="n">${f.seguidores??0}</td></tr>`).join("")}</table></div>`;
+  }
+  $("#main").innerHTML=h;
+}
+async function recoger(){toast("Recogiendo…");const r=await api("/api/metricas",{});toast("Listo: "+JSON.stringify(r));cargar()}
+
+/* ---------- Conexiones ---------- */
+function conexiones(){
+  const c=E.conexiones,cfg=E.config;
+  const fila=(k,t,extra="")=>`<tr><td><b>${t}</b></td><td>${c[k].listo?'<span class="est publicado">listo</span>':'<span class="est error">falta</span>'}</td><td class="suave">${esc(c[k].falta.join(", "))}</td><td>${extra}</td></tr>`;
+  $("#main").innerHTML=`<div class="caja"><div class="fila"><b>Modo</b>
+   <label><input type="checkbox" ${cfg.simular?"checked":""} onchange="simular(this.checked)"> Simulación (no sale nada a redes ni se gasta)</label></div></div>
+  <div class="caja"><table><tr><th>Red</th><th>Estado</th><th>Qué falta</th><th></th></tr>
+   ${fila("instagram","Instagram")}${fila("facebook","Facebook")}
+   ${fila("tiktok","TikTok",`<a class="b" href="/conectar/tiktok" style="text-decoration:none">Conectar</a>`)}
+   ${fila("youtube","YouTube",`<a class="b" href="/conectar/youtube" style="text-decoration:none">Conectar</a>`)}</table>
+   <p class="suave">Instagram, Facebook y la pauta usan el token de Meta de <code>credenciales.env</code>. TikTok y YouTube se conectan una vez con el botón.</p></div>
+  <div class="caja"><b>TikTok</b><div class="fila" style="margin-top:6px"><select onchange="guardarCfg({tiktok_modo:this.value})">
+   <option value="borrador" ${cfg.tiktok_modo=="borrador"?"selected":""}>Borrador: llega a la bandeja del celular y ahí le pones sonido y publicas</option>
+   <option value="directo" ${cfg.tiktok_modo=="directo"?"selected":""}>Directo: publica solo (necesita la app aprobada por TikTok)</option></select></div></div>
+  <div class="caja"><b>Horarios</b><div class="fila" style="margin-top:6px"><label>Videos <input id="hv" value="${esc(cfg.horarios_video.join(", "))}" style="width:260px"></label>
+   <label>Carrusel <input id="hc" value="${esc(cfg.horario_carrusel)}" style="width:70px"></label>
+   <button class="b sec" onclick="guardarCfg({horarios_video:$('#hv').value.split(',').map(s=>s.trim()).filter(Boolean),horario_carrusel:$('#hc').value.trim()})">Guardar</button></div>
+   <p class="suave">Las piezas aprobadas salen solas a su hora mientras el publicador esté abierto.</p></div>
+  <div class="caja"><b>Carpeta de datos</b><div class="suave">${esc(E.datos)}</div></div>
+  <div class="caja fila"><b>Apagar</b><span class="suave">Mientras el publicador esté prendido, lo aprobado sale solo a su hora.</span>
+   <button class="b mal" style="margin-left:auto" onclick="if(confirm('¿Apagar el publicador? Lo programado no saldrá hasta que lo vuelvas a abrir.'))api('/api/adios',{}).then(()=>document.body.innerHTML='<h2 style=padding:40px>Publicador apagado. Ya puedes cerrar la ventana.</h2>')">Apagar publicador</button></div>`;
+}
+async function simular(on){
+  if(!on&&!confirm("Al apagar la simulación, lo aprobado se sube DE VERDAD a las redes a su hora. ¿Apagar?")){pintar();return}
+  await guardarCfg({simular:on})}
+async function guardarCfg(c){await api("/api/config",c);toast("Guardado");cargar()}
+
+/* ---------- Registro ---------- */
+function registro(){$("#main").innerHTML=`<div class="caja"><pre>${esc(E.registro.slice().reverse().join("\n"))}</pre></div>`}
+
+/* ---------- Actualizaciones ---------- */
+async function revisarAct(){try{const r=await api("/api/actualizacion");if(r.nueva){$("#act").style.display="flex";$("#act-txt").textContent=`Hay una versión nueva (${r.nueva}). ${r.completa?"Esta trae cambios grandes: baja el instalador completo.":""}`}}catch(e){}}
+async function actualizar(){toast("Bajando la versión nueva…");await api("/api/actualizar",{});toast("Listo, el publicador se reinicia…");setTimeout(()=>location.reload(),6000)}
+
+document.addEventListener("focusin",e=>{if(e.target.matches("textarea,input"))editando=true});
+document.addEventListener("focusout",()=>editando=false);
+setInterval(()=>{if(!editando&&tab!="pauta")cargar()},15000);
+cargar();revisarAct();setInterval(revisarAct,36e5);
+</script>
+</body>
+</html>

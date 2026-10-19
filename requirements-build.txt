@@ -1,0 +1,13 @@
+# Versiones con las que se arma PublicadorSuplevet.exe (Python 3.14). Cambiarlas = subir LANZADOR_MINIMO.
+# El código del publicador no usa librerías de afuera: solo la ventana (pywebview) y PyInstaller.
+bottle==0.13.4
+cffi==2.1.1
+clr_loader==0.3.1
+packaging==26.3
+proxy_tools==0.1.0
+pycparser==3.11
+pyinstaller-hooks-contrib==2026.8
+pyinstaller==6.22.3
+pythonnet==3.2.1
+pywebview==5.4
+typing_extensions==4.16.0

@@ -1,0 +1,18 @@
+# Nunca a GitHub: credenciales, tokens ni datos de la cola
+*.env
+!credenciales.ejemplo.env
+tokens.json
+google_client_secret.json
+cola.json
+pauta.json
+config_publicador.json
+registro.log
+publicador.log
+metricas/
+copies/
+datos/
+__pycache__/
+dist/
+build/
+_exe/
+*.spec
