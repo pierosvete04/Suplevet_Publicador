@@ -1,3 +1,11 @@
+## 1.2.0 · Conectado con producción
+
+- Pestaña nueva **Listos**: muestra sola los videos que la Sala dejó en V.FINALES de cada producción (Drive «EDICIÓN DE VIDEOS» y la copia de la Sala). Ya no hace falta importar a mano.
+- Marca varios (o «Marcar los nuevos» de una producción), elige a qué redes van y cuándo: repartidos en la semana desde un día, de 1 a 5 por día, o publicar ahora.
+- Elige la cuenta de TikTok o el canal de YouTube para todo el grupo, y si quieres, apruébalos de una vez.
+- Cada video dice si ya está en la cola y a qué hora sale. Los carruseles (una carpeta con fotos dentro de V.FINALES) también entran.
+- En Conexiones puedes poner otras carpetas de producción si no se encuentran solas.
+
 ## 1.1.1 · Textos más prolijos
 
 - Las etiquetas salen con mayúscula inicial: «Dueños», «Picazón», «Reproducciones».

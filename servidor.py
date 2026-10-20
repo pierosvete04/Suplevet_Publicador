@@ -18,6 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import actualizador  # noqa: E402
 import nucleo  # noqa: E402
 import pauta  # noqa: E402
+import produccion  # noqa: E402
 import redes  # noqa: E402
 from redes import publicadas, tiktok, youtube  # noqa: E402
 
@@ -82,7 +83,7 @@ class Manejador(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _archivo(self, ruta):
-        if ruta not in archivos_permitidos() or not os.path.isfile(ruta):
+        if (ruta not in archivos_permitidos() and ruta not in produccion.archivos_permitidos()) or not os.path.isfile(ruta):
             return self._json({"error": "archivo no está en la cola"}, 404)
         tam = os.path.getsize(ruta)
         tipo = mimetypes.guess_type(ruta)[0] or "application/octet-stream"
@@ -124,6 +125,8 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json({"pendientes": n})
             if u.path == "/archivo":
                 return self._archivo(q.get("ruta", ""))
+            if u.path == "/api/listos":
+                return self._json(produccion.listos(q.get("forzar") == "1"))
             if u.path == "/api/publicadas":
                 return self._json(publicadas.todas(q.get("forzar") == "1"))
             if u.path == "/img":
@@ -171,7 +174,7 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(nucleo.importar(d["ruta"]))
             if u.path == "/api/config":
                 permitidas = {"simular", "tiktok_modo", "tiktok_privacidad", "youtube_privacidad",
-                              "horarios_video", "horario_carrusel", "pauta"}
+                              "horarios_video", "horario_carrusel", "pauta", "carpetas_produccion"}
                 nucleo.guardar_config({k: v for k, v in d.items() if k in permitidas})
                 if "simular" in d:
                     nucleo.anotar("Modo simulación " + ("PRENDIDO" if d["simular"] else "APAGADO: ahora sí sale a redes"))
@@ -196,6 +199,9 @@ class Manejador(BaseHTTPRequestHandler):
                     (tiktok if red == "tiktok" else youtube).quitar_cuenta(d["id"])
                     nucleo.anotar(f"Cuenta de {red} quitada")
                 return self._json({"ok": True})
+            if u.path == "/api/listos/a_la_cola":
+                return self._json(produccion.a_la_cola(d.get("rutas") or [], d.get("redes") or [], d.get("cuentas"),
+                                                       d.get("modo") or "repartir", d.get("desde"), d.get("por_dia"), d.get("aprobar") is True))
             if u.path == "/api/metricas":
                 return self._json(nucleo.recoger_metricas(d.get("semana")))
             if partes[:2] == ["api", "pub"]:
