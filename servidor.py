@@ -19,9 +19,22 @@ import actualizador  # noqa: E402
 import nucleo  # noqa: E402
 import pauta  # noqa: E402
 import redes  # noqa: E402
-from redes import tiktok, youtube  # noqa: E402
+from redes import publicadas, tiktok, youtube  # noqa: E402
 
 APP = Path(__file__).resolve().parent / "app.html"
+
+
+_formatos = {}
+
+
+def formato_de(p):
+    """9:16 para los videos; las fotos de un carrusel se miden (y se recuerda la medida)."""
+    if p["tipo"] == "video":
+        return "9:16"
+    ruta = (p.get("archivos") or [None])[0]
+    if ruta not in _formatos:
+        _formatos[ruta] = publicadas.formato(publicadas.medida(Path(ruta)) if ruta and os.path.isfile(ruta) else None, False)
+    return _formatos[ruta]
 
 
 def estado():
@@ -29,6 +42,7 @@ def estado():
     c = nucleo.cola()
     for p in c["publicaciones"]:
         p["avisos"] = nucleo.revisar_copy(p)
+        p["formato"] = formato_de(p)
     return {"version": nucleo.VERSION, "datos": str(nucleo.PUBLICACION), "config": cfg, "conexiones": redes.estado_conexiones(), "cola": c, "pauta": pauta.pauta(),
             "registro": nucleo.registro(80), "metricas": nucleo.metricas_guardadas()}
 
@@ -110,6 +124,19 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json({"pendientes": n})
             if u.path == "/archivo":
                 return self._archivo(q.get("ruta", ""))
+            if u.path == "/api/publicadas":
+                return self._json(publicadas.todas(q.get("forzar") == "1"))
+            if u.path == "/img":
+                ruta = publicadas.bajar(q.get("u", ""))
+                if not ruta:
+                    return self._json({"error": "imagen no disponible"}, 404)
+                cuerpo = ruta.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Cache-Control", "max-age=86400")
+                self.send_header("Content-Length", str(len(cuerpo)))
+                self.end_headers()
+                return self.wfile.write(cuerpo)
             if u.path == "/conectar/tiktok":
                 return self._ir(tiktok.url_conectar())
             if u.path == "/conectar/youtube":
@@ -117,8 +144,8 @@ class Manejador(BaseHTTPRequestHandler):
             if u.path in ("/oauth/tiktok", "/oauth/google"):
                 if q.get("error"):
                     return self._html(f"<h2>No se conectó: {q.get('error_description') or q['error']}</h2>")
-                (tiktok if u.path.endswith("tiktok") else youtube).recibir_codigo(q.get("code", ""), q.get("state", ""))
-                nucleo.anotar(f"Conectado {u.path.rsplit('/', 1)[-1]}")
+                c = (tiktok if u.path.endswith("tiktok") else youtube).recibir_codigo(q.get("code", ""), q.get("state", ""))
+                nucleo.anotar(f"Conectado {u.path.rsplit('/', 1)[-1]}" + (f" · {c['nombre']}" if isinstance(c, dict) and c.get("nombre") else ""))
                 return self._html("<h2>Listo, cuenta conectada. Ya puedes cerrar esta pestaña.</h2>"
                                   "<script>setTimeout(()=>location='/',1500)</script>")
             return self._json({"error": "no existe"}, 404)
@@ -160,6 +187,15 @@ class Manejador(BaseHTTPRequestHandler):
                             trabadas.append(p["codigo"])
                 nucleo.anotar(f"Aprobadas {n} piezas del {d['dia']}" + (f" · trabadas por palabras: {trabadas}" if trabadas else ""))
                 return self._json({"aprobadas": n, "trabadas": trabadas})
+            if len(partes) == 3 and partes[0] == "api" and partes[1] in ("tiktok", "youtube") \
+                    and partes[2] in ("defecto", "quitar"):   # varias cuentas por red
+                red = partes[1]
+                if partes[2] == "defecto":
+                    nucleo.guardar_config({f"{red}_cuenta": d["id"]})
+                else:
+                    (tiktok if red == "tiktok" else youtube).quitar_cuenta(d["id"])
+                    nucleo.anotar(f"Cuenta de {red} quitada")
+                return self._json({"ok": True})
             if u.path == "/api/metricas":
                 return self._json(nucleo.recoger_metricas(d.get("semana")))
             if partes[:2] == ["api", "pub"]:
@@ -194,7 +230,7 @@ class Manejador(BaseHTTPRequestHandler):
 
 
 def main():
-    puerto = nucleo.config()["puerto"]
+    puerto = int(os.environ.get("PUBLICADOR_PUERTO") or nucleo.config()["puerto"])
     srv = ThreadingHTTPServer(("127.0.0.1", puerto), Manejador)
     nucleo.arrancar_reloj()
     url = f"http://localhost:{puerto}"

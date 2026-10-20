@@ -73,6 +73,8 @@ CONFIG_DEFECTO = {
     "graph_version": "v23.0",
     "horarios_video": ["09:00", "12:00", "15:00", "18:00", "21:00"],
     "horario_carrusel": "13:00",
+    "youtube_cuenta": None,         # id del canal de YouTube por defecto
+    "tiktok_cuenta": None,          # open_id de la cuenta de TikTok por defecto (hay varias en tokens.json)
     "tiktok_modo": "borrador",       # borrador: llega a la bandeja de TikTok y tú publicas desde el celular · directo
     "tiktok_privacidad": "SELF_ONLY",  # mientras TikTok no apruebe la app, solo deja SELF_ONLY en modo directo
     "youtube_privacidad": "public",
@@ -332,7 +334,7 @@ def cambiar(pid, cambios):
                 p[k] = cambios[k]
         for red, r in (cambios.get("redes") or {}).items():
             if red in p["redes"]:
-                for k in ("activa", "copy", "titulo"):
+                for k in ("activa", "copy", "titulo", "cuenta"):
                     if k in r:
                         p["redes"][red][k] = r[k]
                 if "estado" in r and r["estado"] == "pendiente":   # reintentar
@@ -378,6 +380,12 @@ def publicar(pid, red):
         if config()["simular"]:
             time.sleep(0.3)
             res = {"id_remoto": f"sim-{red}-{uuid.uuid4().hex[:6]}", "url": None, "simulado": True}
+            if hasattr(redes.CONECTORES[red], "cuenta_de"):
+                try:
+                    cu = redes.CONECTORES[red].cuenta_de(r)
+                    res.update(cuenta=cu.get("open_id") or cu.get("id"), cuenta_nombre=cu.get("nombre"))
+                except Exception:
+                    pass
             anotar(f"[SIMULACIÓN] {red} · {p['codigo']} · {len(p['archivos'])} archivo(s) · {r.get('copy', '')[:60]!r}")
         else:
             res = redes.CONECTORES[red].publicar(p, r)
@@ -441,11 +449,20 @@ def recoger_metricas(semana=None):
                     "vistas": 0, "retencion_3s": 0, "vista_completa": 0, "me_gusta": 0, "comentarios": 0,
                     "guardados": 0, "compartidos": 0, "seguidores": 0, "mensajes": 0,
                     "dolor": p.get("dolor"), "nivel": p.get("nivel"), "publico": p.get("publico")}
+            if r.get("cuenta_nombre"):
+                fila["cuenta"] = r["cuenta_nombre"]
             fila.update({k: v for k, v in m.items() if v is not None})
             por_semana.setdefault(p.get("semana") or "SIN_SEMANA", []).append(fila)
+    cuentas = {}
+    for red, con in redes.CONECTORES.items():
+        if hasattr(con, "cuentas") and con.estado().get("cuentas"):
+            try:
+                cuentas[red] = con.cuentas()
+            except Exception as e:
+                anotar(f"Cuenta {red}: {e}")
     for sem, filas in por_semana.items():
         escribir_json(METRICAS / f"{sem}.json", {"semana": sem, "recogido": datetime.now().isoformat(timespec="minutes"),
-                                                "piezas": filas})
+                                                "cuentas": cuentas, "piezas": filas})
     anotar(f"Métricas recogidas: {sum(len(f) for f in por_semana.values())} filas en {list(por_semana)}")
     return {s: len(f) for s, f in por_semana.items()}
 

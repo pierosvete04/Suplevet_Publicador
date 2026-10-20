@@ -16,3 +16,4 @@ dist/
 build/
 _exe/
 *.spec
+cache_img/
