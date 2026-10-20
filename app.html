@@ -118,7 +118,7 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 .filtro{border:1px solid var(--borde);background:var(--superficie);border-radius:99px;padding:5px 12px;font:600 13px inherit;font-family:inherit;color:var(--suave);cursor:pointer}
 .filtro.on{background:rgba(61,139,255,.15);border-color:#3d8bff;color:var(--texto)}
 .dia{display:flex;align-items:center;gap:12px;margin:26px 0 12px;flex-wrap:wrap}
-.dia h2{margin:0;font-size:17px;text-transform:capitalize}
+.dia h2{margin:0;font-size:17px}
 .rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 .pieza{background:var(--superficie);border:1px solid var(--borde);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sombra);transition:box-shadow .15s,border-color .15s}
 .pieza:hover{box-shadow:0 6px 16px rgba(16,24,40,.12)}
@@ -144,7 +144,7 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 /* ---------- Filtros y vistas ---------- */
 .filtros{display:flex;gap:10px 18px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .grupo{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
-.grupo>span{font:600 11px var(--mono);color:var(--suave);text-transform:uppercase;letter-spacing:.04em;margin-right:4px}
+.grupo>span{font:600 12px var(--f);color:var(--suave);margin-right:4px}
 .ch{border:1px solid var(--borde-2);background:var(--superficie-2);color:var(--suave);border-radius:99px;min-height:32px;padding:0 11px;font:600 12px var(--f);cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
 .ch.on{color:var(--texto);border-color:#3d8bff;background:rgba(61,139,255,.15)}
 .ch .n{color:var(--suave);font-weight:400}
@@ -153,7 +153,7 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 .vista{display:inline-flex;background:var(--superficie-2);border:1px solid var(--borde-2);border-radius:10px;padding:3px;margin-left:auto}
 .vista button{border:0;background:none;color:var(--suave);min-height:30px;padding:0 12px;border-radius:7px;font:600 12px var(--f);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
 .vista button.on{background:var(--elevado);color:var(--texto)}
-.etq{font:600 10.5px var(--mono);letter-spacing:.04em;color:var(--celeste);text-transform:uppercase}
+.etq{font:600 11.5px var(--f);color:var(--celeste)}
 .tag{font:600 10px var(--mono);padding:1px 6px;border-radius:5px;background:var(--superficie-2);color:var(--suave);border:1px solid var(--borde);white-space:nowrap}
 .redes-mini{display:inline-flex;gap:2px}.redes-mini .red-ic{width:18px;height:18px;font-size:8px}
 .sec-t{display:flex;align-items:baseline;gap:10px;margin:18px 0 10px;flex-wrap:wrap}.sec-t h2{margin:0;font:650 15px var(--fd)}
@@ -197,7 +197,7 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 .semana{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
 .dia-c{padding:8px;background:var(--tarjeta);border:1px solid var(--borde);border-radius:var(--r);min-height:200px}
 .dia-c.hoy{border-color:#3d8bff}
-.dia-c h3{margin:0 0 8px;font:650 13px var(--fd);text-transform:capitalize;display:flex;justify-content:space-between}.dia-c h3 span{color:var(--suave);font-weight:400}
+.dia-c h3{margin:0 0 8px;font:650 13px var(--fd);display:flex;justify-content:space-between}.dia-c h3 span{color:var(--suave);font-weight:400}
 .mini{display:flex;gap:8px;align-items:center;padding:6px;border:1px solid var(--borde);border-radius:9px;background:var(--superficie-2);margin-bottom:6px;cursor:pointer}
 .mini:hover{border-color:#3d8bff}.mini .mini-img{width:30px;height:46px}
 .mini .t{font-size:11px;line-height:1.35;flex:1}.mini .t b{display:block;font:600 11px var(--mono);color:var(--celeste)}
@@ -281,7 +281,7 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 .tabla{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--borde);white-space:nowrap}
-th{color:var(--suave);font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.04em;background:var(--superficie-2)}
+th{color:var(--suave);font:600 12px var(--f);background:var(--superficie-2)}
 tbody tr:hover{background:var(--superficie-2)}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .barra-n{display:inline-block;height:6px;border-radius:3px;background:var(--celeste);vertical-align:middle;margin-left:8px}
@@ -349,6 +349,7 @@ const LIMITE={instagram:2200,facebook:63000,tiktok:2200,youtube:5000};
 const ESTADO={pendiente:"Pendiente",publicando:"Subiendo",publicado:"Publicado",simulado:"Simulado",error:"Error"};
 function cambiarTema(){const r=document.documentElement;r.dataset.tema=r.dataset.tema=="claro"?"oscuro":"claro";guardarLocal("tema",r.dataset.tema)}
 const NUM=new Intl.NumberFormat("es-PE");
+const cap=t=>{t=String(t??"").replace(/_/g," ").trim();return t?t[0].toLocaleUpperCase("es-PE")+t.slice(1):t};
 const fmt=n=>NUM.format(n||0);
 
 /* ---------- Estado y utilidades ---------- */
@@ -455,7 +456,7 @@ function cola(){
   if(!l.length){$("#main").innerHTML=h+`<div class="caja vacio">${ic("buscar")}<h3>Nada con esos filtros</h3><p>Prueba con «Todas» o borra la búsqueda.</p></div>`;return}
   $("#main").innerHTML=h+({lista:vLista,tablero:vTablero,calendario:vCalendario})[modo](l);
 }
-const cuando=p=>p.fecha?new Date(p.fecha).toLocaleString("es-PE",{weekday:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"Sin fecha";
+const cuando=p=>{if(!p.fecha)return"Sin fecha";const d=new Date(p.fecha);return`${cap(d.toLocaleDateString("es-PE",{weekday:"short"}).replace(".",""))} ${d.getDate()} · ${p.fecha.slice(11,16)}`};
 function portada(p,c="mini-img"){return p.portada?`<img class="${c}" src="${arc(p.portada)}" alt="" loading="lazy">`:p.tipo=="video"?`<video class="${c}" src="${arc(p.archivos[0])}#t=0.5" muted preload="metadata"></video>`:`<img class="${c}" src="${arc(p.archivos[0])}" alt="" loading="lazy">`}
 function vLista(l){
   if(!l.find(x=>x.p.id==sel))sel=l[0].p.id;const x=l.find(y=>y.p.id==sel),p=x.p,k=x.redes[0];
@@ -491,7 +492,7 @@ function vCalendario(l){
     <button class="btn sec chico" onclick="semanaOff++;cola()" aria-label="Semana siguiente">›</button>${semanaOff?`<button class="btn fant chico" onclick="semanaOff=0;cola()">Esta semana</button>`:""}
     ${fuera?`<span class="suave">${fuera} piezas en otras semanas</span>`:""}</div>
    <div class="semana">${dias.map(d=>{const f=fechaLocal(d),c=l.filter(x=>(x.p.fecha||"").startsWith(f));
-    return`<div class="dia-c ${f==hoy?"hoy":""}"><h3>${d.toLocaleDateString("es-PE",{weekday:"short"})} <span>${d.getDate()} · ${c.length}</span></h3>${c.map(x=>`<div class="mini" onclick="abrirEditor('${x.p.id}')">${portada(x.p)}
+    return`<div class="dia-c ${f==hoy?"hoy":""}"><h3>${cap(d.toLocaleDateString("es-PE",{weekday:"short"}).replace(".",""))} <span>${d.getDate()} · ${c.length}</span></h3>${c.map(x=>`<div class="mini" onclick="abrirEditor('${x.p.id}')">${portada(x.p)}
      <div class="t"><b>${(x.p.fecha||"").slice(11,16)}</b><span class="cod">${esc(x.p.codigo)}</span><div class="fila" style="gap:4px;margin-top:2px">${redesMini(x.redes)}<span class="est-c ${x.est[0]}">${x.est[1]}</span></div></div></div>`).join("")}</div>`}).join("")}</div>
    ${sinFecha.length?`<div class="sec-t"><h2>Sin fecha</h2><span class="etq">${sinFecha.length}</span></div><div class="semana" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">${sinFecha.map(x=>`<div class="mini" onclick="abrirEditor('${x.p.id}')">${portada(x.p)}<div class="t"><span class="cod">${esc(x.p.codigo)}</span>${redesMini(x.redes)}</div></div>`).join("")}</div>`:""}`}
 /* ---------- Editor lateral de borradores ---------- */
@@ -512,7 +513,7 @@ function pintarEditor(todo){
   const viejo=$("#panel").dataset.id==p.id?$("#panel .pantalla video, #panel .pantalla .carr"):null;   // no recargar el video al cambiar de red
   $("#panel").dataset.id=p.id;
   $("#panel").innerHTML=`<div class="panel-cab"><div style="flex:1;min-width:0"><h2>${esc(p.codigo)}</h2>
-    <div class="fila" style="gap:4px;margin-top:4px">${p.nivel?`<span class="chip ${p.nivel}">${p.nivel}</span>`:""}${p.publico?`<span class="chip">${esc(p.publico)}</span>`:""}${p.dolor?`<span class="chip">${esc(p.dolor)}</span>`:""}${p.aprobado?'<span class="est publicado">Aprobada</span>':'<span class="est pendiente">Sin aprobar</span>'}</div></div>
+    <div class="fila" style="gap:4px;margin-top:4px">${p.nivel?`<span class="chip ${p.nivel}">${p.nivel}</span>`:""}${p.publico?`<span class="chip">${esc(cap(p.publico))}</span>`:""}${p.dolor?`<span class="chip">${esc(cap(p.dolor))}</span>`:""}${p.aprobado?'<span class="est publicado">Aprobada</span>':'<span class="est pendiente">Sin aprobar</span>'}</div></div>
     <button class="btn fant" onclick="cerrarEditor()" aria-label="Cerrar">${ic("x")}</button></div>
    <div class="panel-cuerpo">
     <div><div class="tel"><div class="pantalla ${p.tipo=="video"?"video":""}">${media}
@@ -568,6 +569,7 @@ async function publicar(id,red){
 async function borrar(id){if(await preguntar("¿Quitar esta pieza de la cola?","El video no se borra de tu carpeta. Solo deja de estar en la cola.","Quitar de la cola","peligro")){await api(`/api/pub/${id}/borrar`,{});cargar()}}
 
 /* ---------- Pauta ---------- */
+const OBJETIVO={reproducciones:"Reproducciones",alcance:"Alcance",trafico:"Tráfico al enlace",mensajes:"Mensajes a WhatsApp"};
 function pauta(){
   const ps=E.cola.publicaciones;
   const pub=p=>Object.values(p.redes).some(r=>r.estado=="publicado"||r.estado=="simulado");
@@ -592,7 +594,7 @@ function pauta(){
     const res=c.resultados?.anuncios||[];const [cl,tx]=EST[c.estado]||["pendiente",c.estado];
     const tot=res.reduce((a,f)=>({g:a.g+f.gasto,t:a.t+f.thruplays,m:a.m+f.mensajes,i:a.i+f.impresiones}),{g:0,t:0,m:0,i:0});
     h+=`<div class="caja"><div class="fila"><h3 style="margin:0">${esc(c.nombre)}</h3><span class="est ${cl}">${tx}</span>
-     <span class="suave">${esc(c.objetivo)} · S/ ${c.presupuesto_diario} por día · ${c.piezas.length} anuncios · ${esc((c.inicio||"").replace("T"," "))}${c.fin?" → "+esc(c.fin.replace("T"," ")):""}</span>
+     <span class="suave">${esc(OBJETIVO[c.objetivo]||cap(c.objetivo))} · S/ ${c.presupuesto_diario} por día · ${c.piezas.length} anuncios · ${esc((c.inicio||"").replace("T"," "))}${c.fin?" → "+esc(c.fin.replace("T"," ")):""}</span>
      <span style="margin-left:auto" class="fila">
      ${["borrador","error"].includes(c.estado)?`<button class="btn prim chico" onclick="accion('${c.id}','crear')">${ic("subir")}Crear en Meta (en pausa)</button>`:""}
      ${["creada","pausada"].includes(c.estado)?`<button class="btn acento chico" onclick="activar('${c.id}',${c.presupuesto_diario})">Activar</button>`:""}
@@ -649,7 +651,7 @@ function conexiones(){
   const c=E.conexiones,cfg=E.config;
   const caja=k=>{const x=c[k],cs=x.cuentas,oauth=["tiktok","youtube"].includes(k);const que=k=="youtube"?"canal":"cuenta";
     return `<div class="caja red-caja"><div class="cab">${redIc(k,"grande "+(x.listo?"":"apagada"))}<div style="flex:1"><h3>${REDES[k][1]}</h3><span class="est ${x.listo?"listo":"falta"}">${x.listo?"Conectado":"Falta conectar"}</span></div></div>
-     ${x.falta.length?`<div><div class="suave" style="font-weight:600;margin-bottom:4px">Qué falta</div><ul class="falta-l">${x.falta.map(f=>`<li>${/^[A-Z_]+$|\.json$/.test(f)?`<code>${esc(f)}</code>`:esc(f)}</li>`).join("")}</ul></div>`:""}
+     ${x.falta.length?`<div><div class="suave" style="font-weight:600;margin-bottom:4px">Qué falta</div><ul class="falta-l">${x.falta.map(f=>`<li>${/^[A-Z_]+$|\.json$/.test(f)?`<code>${esc(f)}</code>`:esc(cap(f))}</li>`).join("")}</ul></div>`:""}
      ${cs?.length?`<div class="cuentas">${cs.map(a=>`<div class="cuenta-f"><span class="nom" title="${esc(a.nombre)}">${esc(a.nombre)}</span>${a.defecto?'<span class="est simulado">Por defecto</span>':`<button class="btn fant chico" onclick="api('/api/${k}/defecto',{id:'${esc(a.id)}'}).then(cargar)" title="Usar por defecto" aria-label="Usar ${esc(a.nombre)} por defecto">${ic("estrella")}</button>`}
        <button class="btn fant chico" onclick="quitarCuenta('${k}','${esc(a.id)}','${esc(a.nombre).replace(/'/g,"")}')" aria-label="Quitar ${esc(a.nombre)}" title="Quitar">${ic("x")}</button></div>`).join("")}</div>`:""}
      <p class="suave" style="margin:0">${AYUDA[k]}</p>

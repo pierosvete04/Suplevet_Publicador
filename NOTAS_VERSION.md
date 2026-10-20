@@ -1,3 +1,9 @@
+## 1.1.1 · Textos más prolijos
+
+- Las etiquetas salen con mayúscula inicial: «Dueños», «Picazón», «Reproducciones».
+- Los títulos de filtros y tablas ya no van todo en mayúsculas.
+- Fechas más cortas y claras: «Mié 21 · 09:00».
+
 ## 1.1.0 · Antena: nueva cara, Publicadas y varias cuentas
 
 - Nueva marca «Antena», con el mismo estilo que la Sala de edición: oscuro por defecto y botón para pasar a claro.
