@@ -32,7 +32,8 @@ jobs:
           pip install -r requirements-build.txt
 
       - name: Revisar que el código compila
-        run: python -m compileall -q nucleo.py servidor.py pauta.py actualizador.py produccion.py redes
+        shell: bash
+        run: python -m compileall -q $(ls *.py | grep -v '^lanzador.py$') redes
 
       - name: Armar PublicadorSuplevet.exe
         shell: bash
@@ -48,7 +49,12 @@ jobs:
           $tag = "${{ github.ref_name }}"
           $app = "dist/PublicadorSuplevet/app"
           New-Item -ItemType Directory -Force $app | Out-Null
-          Copy-Item nucleo.py,servidor.py,pauta.py,actualizador.py,produccion.py,app.html,VERSION,LANZADOR_MINIMO,LEEME.md -Destination $app
+          # todo el código menos el lanzador (ese va dentro del .exe): así un módulo nuevo nunca queda afuera
+          Get-ChildItem *.py | Where-Object Name -ne "lanzador.py" | Copy-Item -Destination $app
+          Copy-Item app.html,VERSION,LANZADOR_MINIMO,LEEME.md -Destination $app
+          # si falta un módulo que importa el servidor, el release no sale
+          python instalador/revisar_app.py $app
+          if ($LASTEXITCODE -ne 0) { exit 1 }
           Copy-Item redes -Destination $app -Recurse
           New-Item -ItemType Directory -Force dist/PublicadorSuplevet/datos | Out-Null
           Copy-Item credenciales.ejemplo.env dist/PublicadorSuplevet/datos/credenciales.env

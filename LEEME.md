@@ -13,7 +13,7 @@ Arranca en **modo simulación**: anota lo que haría, pero no sube nada ni gasta
 
 ## Instalar
 
-1. Baja `PublicadorSuplevet-Instalador-vX.Y.Z.exe` de la página de Releases del repo y ábrelo.
+1. **Portable (sin instalar):** baja `PublicadorSuplevet-vX.Y.Z.zip` de Releases, descomprímelo (por ejemplo en `2_PUBLICACION\PublicadorSuplevet`) y abre `PublicadorSuplevet.exe`. **Con instalador:** baja `PublicadorSuplevet-Instalador-vX.Y.Z.exe` y ábrelo.
 2. Abre el programa desde el escritorio. Se actualiza solo: cuando hay versión nueva aparece una franja naranja con «Actualizar ahora».
 3. Pega tus claves en `datos\credenciales.env` (la ruta exacta sale en Conexiones → Carpeta de datos).
 

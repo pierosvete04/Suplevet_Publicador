@@ -1,3 +1,9 @@
+## 1.3.1 · Arreglo: la 1.3.0 no traía la pestaña Hoy ni los copies
+
+- La versión 1.3.0 se armó sin los archivos nuevos (sugerencias y copies), y el programa no arrancaba al actualizarse. Esta los trae.
+- El armado ahora copia todo el código y revisa que no falte nada antes de publicar.
+- Portable: descomprime `PublicadorSuplevet-vX.Y.Z.zip` donde quieras y abre `PublicadorSuplevet.exe`, sin instalar nada. Si la carpeta queda dentro de `2_PUBLICACION`, usa los datos de ahí.
+
 ## 1.3.0 · Qué subir hoy y copies desde el guion
 
 - Pestaña nueva **Hoy**: mira lo que está listo en producción y lo que ya salió, y arma la mezcla de cada cuenta (Instagram, Facebook, cada cuenta de TikTok y cada canal de YouTube). Por defecto 10 videos por cuenta al día, repartidos de 8:00 a 22:00.
