@@ -1,3 +1,7 @@
+## 1.3.3 · Abre más rápido
+
+- El Publicador abre más rápido: la ventana aparece al instante con «Abriendo…» y la app carga apenas está lista (antes no se veía nada hasta que todo arrancaba). Para tenerlo hay que pasar una vez el instalador completo de esta versión; con «Actualizar ahora» todo sigue funcionando igual que antes.
+
 ## 1.3.2 · Nombre e ícono nuevos
 
 - Se llama **Publicador** (sin Suplevet) y tiene ícono nuevo: una **P** verde, de la misma familia que la Sala de edición (E) y la Sala de diseño (D). Para ver el ícono y el nombre nuevos en el escritorio hay que pasar una vez el instalador completo; borra solo el acceso directo viejo.

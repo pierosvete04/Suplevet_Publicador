@@ -14,7 +14,7 @@ Por dentro es un servidor solo de esta PC (127.0.0.1); nadie de afuera puede ent
 
 Si cambias este archivo o las librerías, sube LANZADOR_VERSION y el archivo LANZADOR_MINIMO.
 """
-LANZADOR_VERSION = "1.0.0"
+LANZADOR_VERSION = "1.1.0"
 
 # Imports explícitos para que PyInstaller empaquete lo que usa el código de app/ (que no analiza).
 import ctypes, http.server, io, json, mimetypes, re, runpy, secrets, shutil, socket, socketserver  # noqa: E401,F401
@@ -101,13 +101,31 @@ def navegador_app():
     return None
 
 
-def ventana_propia(datos, log):
+ABRIENDO = """<!doctype html><meta charset="utf-8"><body style="margin:0;height:100vh;display:grid;place-items:center;
+background:#04060b;color:#8494b4;font:15px 'Segoe UI',system-ui,sans-serif"><div style="text-align:center">
+<div style="font:700 20px 'Segoe UI',system-ui,sans-serif;color:#edf3ff;margin-bottom:10px">{titulo}</div>
+<div>Abriendo…</div></div></body>"""
+NO_ARRANCO = """<!doctype html><meta charset="utf-8"><body style="margin:0;height:100vh;display:grid;place-items:center;
+background:#04060b;color:#edf3ff;font:15px 'Segoe UI',system-ui,sans-serif"><div style="max-width:520px;text-align:center">
+<div style="font:700 20px 'Segoe UI';margin-bottom:10px">{titulo} no pudo arrancar</div>
+<div style="color:#8494b4">Mándale a Claude el archivo<br><code>{log}</code></div></div></body>"""
+
+
+def cargar(ventana, listo, log_ruta):
+    """Con la ventana ya abierta («Abriendo…»), espera al servidor y entonces muestra la app."""
+    if listo():
+        ventana.load_url(URL)
+    else:
+        ventana.load_html(NO_ARRANCO.format(titulo=TITULO, log=log_ruta))
+
+
+def ventana_propia(datos, log, listo=None, log_ruta=""):
     if webview is None:
         return False
     try:
         webview.settings["OPEN_EXTERNAL_LINKS_IN_BROWSER"] = True   # Conectar TikTok/YouTube y «ver» abren el navegador
-        webview.create_window(TITULO, URL, width=1380, height=900, min_size=(900, 600), text_select=True)
-        webview.start(gui="edgechromium", private_mode=False, storage_path=str(datos / "ventana_app"))
+        ventana = webview.create_window(TITULO, None if listo else URL, html=ABRIENDO.format(titulo=TITULO) if listo else None, width=1380, height=900, min_size=(900, 600), text_select=True)
+        webview.start(cargar if listo else None, (ventana, listo, log_ruta) if listo else None, gui="edgechromium", private_mode=False, storage_path=str(datos / "ventana_app"))
         return True
     except Exception:  # noqa: BLE001
         log.write("No se pudo abrir la ventana propia; se usa Edge.\n" + traceback.format_exc())
@@ -154,11 +172,15 @@ def main():
     cmd = [sys.executable, "--servidor"] if getattr(sys, "frozen", False) else [sys.executable, __file__, "--servidor"]
     sin_consola = 0x08000000 if os.name == "nt" else 0
     estado = {"proc": subprocess.Popen(cmd, stdout=log, stderr=log, creationflags=sin_consola), "codigo": None}
-    for _ in range(120):
-        if en_uso() or estado["proc"].poll() is not None:
-            break
-        time.sleep(0.25)
-    if estado["proc"].poll() is not None:
+    def listo():  # True cuando el servidor responde; False si se cerró o no arrancó en 90 s
+        for _ in range(360):
+            if en_uso():
+                return True
+            if estado["proc"].poll() is not None:
+                return False
+            time.sleep(0.25)
+        return False
+    if webview is None and not listo():  # sin ventana propia: se espera aquí, como antes
         mensaje(f"El publicador no pudo arrancar. Mándale a Claude el archivo:\n{datos / 'publicador.log'}")
         return
 
@@ -171,9 +193,10 @@ def main():
             estado["proc"] = subprocess.Popen(cmd, stdout=log, stderr=log, creationflags=sin_consola)
     hilo = threading.Thread(target=servidor, daemon=True)
     hilo.start()
-    if ventana_propia(datos, log):   # espera aquí hasta que se cierre la ventana
+    if ventana_propia(datos, log, listo, str(datos / 'publicador.log')):   # espera aquí hasta que se cierre la ventana
         al_cerrar()
     else:
+        listo()  # Edge no tiene «Abriendo…»: se espera a que el servidor responda
         abrir_ventana(datos)         # con Edge no se puede esperar: se apaga con el botón «Apagar» del programa
     hilo.join()
     if estado["codigo"] not in (0, None):
