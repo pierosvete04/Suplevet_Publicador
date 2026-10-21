@@ -52,10 +52,10 @@ jobs:
           # todo el código menos el lanzador (ese va dentro del .exe): así un módulo nuevo nunca queda afuera
           Get-ChildItem *.py | Where-Object Name -ne "lanzador.py" | Copy-Item -Destination $app
           Copy-Item app.html,VERSION,LANZADOR_MINIMO,LEEME.md -Destination $app
-          # si falta un módulo que importa el servidor, el release no sale
+          Copy-Item redes -Destination $app -Recurse
+          # ya con todo copiado: si falta un módulo propio que el código importa, el release no sale
           python instalador/revisar_app.py $app
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          Copy-Item redes -Destination $app -Recurse
           New-Item -ItemType Directory -Force dist/PublicadorSuplevet/datos | Out-Null
           Copy-Item credenciales.ejemplo.env dist/PublicadorSuplevet/datos/credenciales.env
           Compress-Archive -Path "$app/*" -DestinationPath "app-$tag.zip"
