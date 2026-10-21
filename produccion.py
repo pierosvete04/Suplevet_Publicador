@@ -159,6 +159,8 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
     if not elegidas:
         raise ValueError("Esos videos ya están en la cola")
     fechas = _fechas(len(elegidas), modo, desde, por_dia, [p["tipo"] for p in elegidas])
+    import copys   # el copy lo escribe el publicador desde el guion; el .txt de la Sala queda de respaldo
+    escritos = {p["ruta"]: copys.generar(p) for p in elegidas if p["tipo"] == "video"}
     nuevas, trabadas = [], []
     with nucleo._candado:
         c = nucleo.cola()
@@ -175,6 +177,8 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
             pub.pop("dia", None)
             pub.pop("_desde", None)
             pub["fecha"] = fecha
+            if escritos.get(p["ruta"]):
+                copys.aplicar(pub, escritos[p["ruta"]])
             for red, r in pub["redes"].items():
                 r["activa"] = red in redes
                 if (cuentas or {}).get(red):

@@ -334,6 +334,23 @@ dialog .dc{padding:20px 22px}
 dialog h3{margin:0 0 8px;font-size:17px}
 dialog p{margin:0;color:var(--suave);white-space:pre-line}
 dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;background:var(--superficie-2);border-top:1px solid var(--borde)}
+
+/* ---------- Hoy: sugerencias por cuenta ---------- */
+.sug-rej{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+.sug-d{padding:0;margin:0;overflow:hidden}
+.sug-cab{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--borde)}
+.sug-cab b{display:block;font-size:14px}.sug-cab .suave{font-size:12px}
+.sug-f{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--borde)}
+.sug-f.off{opacity:.45}
+.sug-f .hora{font:600 12px var(--mono);color:var(--celeste);width:42px;flex:none}
+.sug-f .c{flex:1}.sug-f .c b{font:600 12px var(--mono);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sug-f .c p{margin:2px 0 0;font-size:12px;color:var(--suave)}.sug-f .c p.ojo{color:var(--aviso)}
+.sug-f input[type=checkbox]{width:18px;height:18px;accent-color:#3d8bff;flex:none;cursor:pointer}
+.sug-acc{display:flex;gap:0;flex:none}.sug-acc .btn{min-height:30px;padding:0 7px}
+.sug-pie{padding:10px 14px;font-size:12px;color:var(--suave)}.sug-pie.falta{color:var(--aviso);background:var(--aviso-fondo)}
+.res-s{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.res-s .chip{padding:3px 10px;font-size:12.5px}.res-s .chip b{color:var(--texto);margin-right:4px}
+.aj-s{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:10px}
+@media (max-width:640px){.sug-rej{grid-template-columns:1fr}.sug-f{flex-wrap:wrap}.sug-f .c{flex-basis:calc(100% - 140px)}}
 </style>
 </head>
 <body>
@@ -356,7 +373,7 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
 <dialog id="dlg"><div class="dc"><h3 id="dlg-t"></h3><p id="dlg-p"></p></div><div class="dp"><button class="btn sec" id="dlg-no">Cancelar</button><button class="btn prim" id="dlg-si">Aceptar</button></div></dialog>
 <script>
 /* ---------- Íconos (trazos tipo Lucide) ---------- */
-const IC={
+const IC={hoy:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
  cola:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
  pauta:'<path d="M3 11l15-6v14L3 13z"/><path d="M7 12v6a2 2 0 0 0 4 0v-4"/>',
  metricas:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
@@ -384,8 +401,8 @@ const cap=t=>{t=String(t??"").replace(/_/g," ").trim();return t?t[0].toLocaleUpp
 const fmt=n=>NUM.format(n||0);
 
 /* ---------- Estado y utilidades ---------- */
-const TABS=[["listos","Listos"],["cola","Cola"],["publicadas","Publicadas"],["pauta","Pauta"],["metricas","Métricas"],["conexiones","Conexiones"],["registro","Registro"]];
-let E=null,tab=leer("tab")||"cola",editando=false,filtro=leer("filtro")||"todas",busca="",ed=null,modo=leer("modo")||"lista",sel=null,semanaOff=0,PUB=null,cargandoPub=false;
+const TABS=[["hoy","Hoy"],["listos","Listos"],["cola","Cola"],["publicadas","Publicadas"],["pauta","Pauta"],["metricas","Métricas"],["conexiones","Conexiones"],["registro","Registro"]];
+let E=null,tab=leer("tab")||"hoy",editando=false,filtro=leer("filtro")||"todas",busca="",ed=null,modo=leer("modo")||"lista",sel=null,semanaOff=0,PUB=null,cargandoPub=false;
 const F={red:"todas",clase:"todas",fmt:"todos"};
 function leer(k){try{return localStorage.getItem("pub_"+k)}catch(e){return null}}
 function guardarLocal(k,v){try{localStorage.setItem("pub_"+k,v)}catch(e){}}
@@ -405,8 +422,9 @@ function pintar(){
   $("#ver").textContent="v"+(E.version||"");
   $("#redes-top").innerHTML=Object.keys(REDES).map(k=>`<button onclick="ir('conexiones')" title="${REDES[k][1]}: ${E.conexiones[k]?.listo?"conectado":"falta conectar"}" aria-label="${REDES[k][1]}: ${E.conexiones[k]?.listo?"conectado":"falta conectar"}">${redIc(k,E.conexiones[k]?.listo?"":"apagada")}</button>`).join("");
   pintarMenu();
-  ({listos,publicadas,cola,pauta,metricas,conexiones,registro})[tab]();
+  ({hoy,listos,publicadas,cola,pauta,metricas,conexiones,registro})[tab]();
   if(tab!="listos")$("#barra-l")?.remove();
+  if(tab!="hoy")$("#barra-s")?.remove();
   if(ed)pintarEditor(false);
 }
 function pintarMenu(){
@@ -543,6 +561,90 @@ async function pasarALaCola(){
   toast(`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.trabadas.length?`. Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""),r.trabadas.length?"mal":"ok");
   selL.clear();$("#barra-l")?.remove();await cargar(true);traerListos(true)}
 
+/* ---------- Hoy: qué subir a cada cuenta ---------- */
+let SUG=null,cargandoSug=false,SIDX=[],apagadosS=null;const SOP={desde:null,dias:1,excluir:[],quitados:new Set(),aprobar:false,ajustes:false};
+const hoyF=()=>fechaLocal(new Date());
+const llaveS=(c,x)=>c+"|"+x.ruta+"|"+x.fecha;
+async function traerSug(){if(cargandoSug)return;cargandoSug=true;if(tab=="hoy")hoy();
+  const q=new URLSearchParams({desde:SOP.desde||hoyF(),dias:SOP.dias,excluir:SOP.excluir.join("|")});
+  try{SUG=await api("/api/sugerencias?"+q)}catch(e){}finally{cargandoSug=false;if(tab=="hoy")hoy()}}
+function elegidasS(){const out=[];for(const d of SUG?.dias||[])for(const x of d.destinos)for(const p of[...x.piezas,...(x.carrusel?[x.carrusel]:[])])if(!SOP.quitados.has(llaveS(x.clave,p)))out.push({ruta:p.ruta,clave:x.clave,fecha:p.fecha});return out}
+function diaLargo(f){const d=new Date(f+"T12:00");return cap(d.toLocaleDateString("es-PE",{weekday:"long",day:"numeric",month:"long"}))+(f==hoyF()?" · hoy":f==manana()?" · mañana":"")}
+function hoy(){
+  if(!SUG&&!cargandoSug){traerSug();return}
+  const cab=`<div class="titulo-pag"><div><h1>Qué subir</h1><p>Mira lo que está listo en producción y lo que ya salió, y arma la mezcla de cada cuenta. Nunca pone dos videos del mismo cuerpo en una cuenta el mismo día.</p></div>
+   <div class="acciones"><label class="bl-c">Desde <input type="date" value="${SOP.desde||hoyF()}" onchange="SOP.desde=this.value;SOP.quitados.clear();traerSug()"></label>
+    <select onchange="SOP.dias=+this.value;SOP.quitados.clear();traerSug()" aria-label="Cuántos días">${[[1,"Solo ese día"],[3,"3 días"],[7,"7 días"]].map(([n,t])=>`<option value="${n}" ${SOP.dias==n?"selected":""}>${t}</option>`).join("")}</select>
+    <button class="btn sec" onclick="SOP.ajustes=!SOP.ajustes;hoy()" aria-expanded="${SOP.ajustes}">${ic("editar")}Ajustes</button>
+    <button class="btn sec" onclick="SOP.excluir=[];SOP.quitados.clear();traerSug()" ${cargandoSug?"disabled":""}>${ic("refrescar")}${cargandoSug?"Pensando…":"Volver a pensar"}</button></div></div>`;
+  if(!SUG){$("#main").innerHTML=cab+`<div class="sug-rej">${Array.from({length:4},()=>`<div class="esqueleto" style="height:320px"></div>`).join("")}</div>`;return}
+  const inv=SUG.inventario;SIDX=[];
+  let h=cab+(SOP.ajustes?ajustesS():"")+`<div class="res-s">
+    <span class="chip"><b>${inv.videos}</b>videos listos</span><span class="chip"><b>${inv.cuerpos}</b>cuerpos distintos</span>
+    <span class="chip"><b>${inv.sin_salir}</b>sin salir en ninguna cuenta</span>${inv.carruseles?`<span class="chip"><b>${inv.carruseles}</b>carruseles</span>`:""}
+    <span class="chip"><b>${SUG.destinos.filter(d=>d.activo).length}</b>cuentas · ${SUG.por_dia} por cuenta al día</span></div>`;
+  if(SUG.avisos.length)h+=`<ul class="avisos" style="margin-bottom:14px;font-size:13px">${SUG.avisos.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`;
+  if(!inv.videos)h+=`<div class="caja vacio">${ic("carpeta")}<h3>No hay videos listos</h3><p>Cuando la Sala deje videos en V.FINALES, aquí salen las sugerencias.</p></div>`;
+  for(const d of SUG.dias){
+    h+=`<div class="sec-t"><h2>${esc(diaLargo(d.dia))}</h2><span class="etq">${d.sugeridos} sugeridos${d.faltan?` · faltan ${d.faltan} para llegar al cupo`:""}</span></div><div class="sug-rej">`;
+    for(const x of d.destinos){
+      const filas=[...x.piezas,...(x.carrusel?[x.carrusel]:[])],n=x.piezas.length+x.ya.length;
+      h+=`<div class="caja sug-d"><div class="sug-cab">${redIc(x.red)}<div style="flex:1"><b>${esc(x.nombre)}</b><span class="suave">${n} de ${SUG.por_dia} videos${x.ya.length?` · ${x.ya.length} ya en la cola`:""}${x.carrusel?" · 1 carrusel":""}</span></div></div>
+       ${filas.map(p=>filaS(x,p)).join("")}
+       ${x.ya.length?`<div class="sug-pie">Ya en la cola: ${x.ya.map(y=>`${y.fecha.slice(11,16)} ${esc(y.codigo)}`).join(" · ")}</div>`:""}
+       ${x.faltan?`<div class="sug-pie falta">Faltan ${x.faltan}: no quedan cuerpos distintos sin subir a esta cuenta.</div>`:""}
+       ${!filas.length&&!x.ya.length&&!x.faltan?`<div class="sug-pie">Nada para este día.</div>`:""}</div>`;
+    }
+    h+=`</div>`;
+  }
+  $("#main").innerHTML=h+`<div class="espacio-barra" style="height:110px"></div>`;
+  barraS();
+}
+function filaS(x,p){const i=SIDX.push({x,p})-1,off=SOP.quitados.has(llaveS(x.clave,p)),carr=p.tipo=="carrusel";
+  const img=p.portada?`<img class="mini-img" src="${arc(p.portada)}" alt="" loading="lazy">`:`<video class="mini-img" src="${arc(p.archivos[0])}#t=1" muted preload="metadata"></video>`;
+  return`<div class="sug-f ${off?"off":""}"><input type="checkbox" ${off?"":"checked"} onchange="tS(${i})" aria-label="Subir ${esc(p.codigo)} a ${esc(x.nombre)}">
+   <span class="hora">${p.hora}</span>${img}
+   <div class="c"><b title="${esc(p.codigo)}">${esc(p.codigo)}</b>
+    ${p.gancho?`<p style="color:var(--texto)" title="Primera línea del copy">${esc(p.gancho)}</p>`:""}
+    <p class="${p.pronto?"ojo":""}">${carr?`Carrusel · ${p.archivos.length} láminas`:esc(p.motivo)}</p>
+    ${carr?"":`<div class="fila" style="gap:4px;margin-top:3px">${p.hook?`<span class="tag">${esc(p.hook)}</span>`:""}<span class="tag" title="Cuerpo">${esc(p.cuerpo.split(" · ").pop())}</span><span class="tag">${esc(p.produccion)}</span></div>`}</div>
+   <div class="sug-acc"><button class="btn fant" onclick="verS(${i})" title="Ver" aria-label="Ver ${esc(p.codigo)}">${carr?ic("ojo"):"▶"}</button>
+    <button class="btn fant" onclick="cambiarS(${i})" title="Cambiar por otro" aria-label="Cambiar ${esc(p.codigo)} por otro">${ic("refrescar")}</button>
+    ${carr?"":`<button class="btn fant" onclick="yaSalioS(${i})" title="Ya lo subí a mano: no sugerirlo más" aria-label="Marcar ${esc(p.codigo)} como ya subido">${ic("check")}</button>`}</div></div>`}
+function tS(i){const{x,p}=SIDX[i],k=llaveS(x.clave,p);SOP.quitados.has(k)?SOP.quitados.delete(k):SOP.quitados.add(k);hoy()}
+function cambiarS(i){SOP.excluir.push(SIDX[i].p.ruta);traerSug()}
+async function yaSalioS(i){const p=SIDX[i].p;if(!await preguntar("¿Ya subiste este video?",`${p.codigo} no se va a sugerir más en ninguna cuenta.`,"Sí, ya salió","prim"))return;
+  await api("/api/sugerencias/ya_salio",{ruta:p.archivos[0]});toast("Listo, no se sugiere más","ok");traerSug()}
+function verS(i){const p=SIDX[i].p,v=p.tipo!="carrusel";
+  vis={red:SIDX[i].x.red,cuenta:SIDX[i].x.nombre,tipo:v?"Video":"Carrusel",formato:v?"9:16":"4:5",fotos:v?[]:p.archivos.map(arc),met:{},texto:p.motivo||"",fecha:p.fecha,video:v?arc(p.archivos[0]):null};
+  visI=0;pintarVisor();$("#visor").classList.add("on");document.addEventListener("keydown",teclaVisor)}
+function ajustesS(){const a=SUG.ajustes;
+  return`<div class="caja"><h3>Ajustes de las sugerencias</h3>
+   <div class="aj-s"><label class="campo">Videos por cuenta al día<select id="aj-n">${Array.from({length:15},(_,k)=>k+1).map(n=>`<option ${a.por_dia==n?"selected":""}>${n}</option>`).join("")}</select></label>
+    <label class="campo">Primer video<input id="aj-d" type="time" value="${a.desde}"></label>
+    <label class="campo">Último video<input id="aj-h" type="time" value="${a.hasta}"></label>
+    <label class="campo">Días antes de repetir un cuerpo en la misma cuenta<select id="aj-a">${[0,1,2,3,4,5,7].map(n=>`<option ${a.aire_cuerpo==n?"selected":""}>${n}</option>`).join("")}</select></label></div>
+   <div class="bl-t" style="margin:14px 0 6px">Cuentas que reciben sugerencias</div>
+   <div class="fila" style="gap:6px">${SUG.destinos.map(d=>`<button class="ch ${d.activo?"on":""}" aria-pressed="${d.activo}" onclick="tDest('${esc(d.clave)}')">${redIc(d.red,d.listo?"":"apagada")}${esc(d.nombre)}</button>`).join("")}</div>
+   <p class="suave" style="margin:10px 0 0">¿Faltan cuentas? Agrega las otras cuentas de TikTok y canales de YouTube en <a href="#" onclick="ir('conexiones');return false">Conexiones</a> → «Agregar cuenta». Cada una aparece aquí sola.</p>
+   <div style="margin-top:12px"><button class="btn prim" onclick="guardarAj()">Guardar ajustes</button></div></div>`}
+function tDest(k){apagadosS=apagadosS||[...(SUG.ajustes.apagados||[])];const i=apagadosS.indexOf(k);i<0?apagadosS.push(k):apagadosS.splice(i,1);
+  SUG.destinos.forEach(d=>d.activo=!apagadosS.includes(d.clave));hoy()}
+async function guardarAj(){await guardarCfg({sugeridor:{por_dia:+$("#aj-n").value,desde:$("#aj-d").value,hasta:$("#aj-h").value,aire_cuerpo:+$("#aj-a").value,apagados:apagadosS||SUG.ajustes.apagados||[]}});
+  apagadosS=null;SOP.quitados.clear();traerSug()}
+function barraS(){
+  const el=elegidasS();let b=$("#barra-s");if(!el.length){b?.remove();return}
+  if(!b){b=document.createElement("div");b.id="barra-s";b.className="barra-l";document.body.append(b)}
+  const cuentas=new Set(el.map(x=>x.clave)).size;
+  b.innerHTML=`<div class="barra-l-in"><div class="bl-g"><b>${el.length} ${el.length==1?"pieza":"piezas"} para ${cuentas} ${cuentas==1?"cuenta":"cuentas"}</b><span class="suave">Desmarca lo que no quieras.</span></div>
+   <div class="bl-g bl-fin"><label class="interruptor"><input type="checkbox" ${SOP.aprobar?"checked":""} onchange="SOP.aprobar=this.checked"><span class="riel"></span>Aprobar de una vez</label>
+   <button class="btn acento" onclick="aceptarS()">${ic("enviar")}Pasar ${el.length} a la cola</button></div></div>`}
+async function aceptarS(){const el=elegidasS();
+  if(SOP.aprobar&&!E.config.simular&&!await preguntar(`¿Aprobar ${el.length} piezas?`,"La simulación está apagada: saldrán de verdad, cada una a su hora.","Pasar y aprobar","acento"))return;
+  const r=await api("/api/sugerencias/aceptar",{items:el,aprobar:SOP.aprobar});
+  toast(`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.trabadas.length?`. Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""),r.trabadas.length?"mal":"ok");
+  SOP.quitados.clear();SOP.excluir=[];$("#barra-s")?.remove();LIS=null;await cargar(true);traerSug()}
+
 /* ---------- Cola: una sola lista, tres formas de verla ---------- */
 function cola(){
   const todas=E.cola.publicaciones.map(datosCola).sort((a,b)=>(a.p.fecha||"9").localeCompare(b.p.fecha||"9"));
@@ -635,7 +737,9 @@ function pintarEditor(todo){
       <label class="campo">Copy${k=="tiktok"&&E.config.tiktok_modo=="borrador"?' <span class="suave" style="font-weight:400">· en modo borrador lo pegas tú al publicar desde el celular</span>':""}
        <textarea oninput="ed.borr.${k}.copy=this.value;ed.sucio=true;$('#pv-copy').textContent=this.value;cont(this,${LIMITE[k]||2200},'c-copy')">${esc(r.copy)}</textarea>
        <span class="contador ${(r.copy||"").length>(LIMITE[k]||2200)?"pasa":""}" id="c-copy">${fmt((r.copy||"").length)} / ${fmt(LIMITE[k]||2200)} caracteres</span></label>
-      <div class="fila"><button class="btn sec chico" onclick="copiarATodas()">Usar este copy en las demás redes</button></div>
+      <div class="fila"><button class="btn sec chico" onclick="copiarATodas()">Usar este copy en las demás redes</button>
+       <button class="btn sec chico" onclick="otroCopy()" title="Lo vuelve a escribir desde el guion, con otro emoji, otro orden y otro cierre">${ic("refrescar")}Escribir otro copy</button></div>
+      ${p.copy_fuente=="transcripción"?`<p class="avisos" style="margin-top:8px">Este video no tiene guion: el copy salió de lo que se escucha en el audio. Revísalo antes de aprobar.</p>`:""}
       ${orig.error?`<div class="err"><b>No se pudo subir.</b> ${esc(orig.error)}</div>`:""}${orig.nota?`<div class="nota">${esc(orig.nota)}</div>`:""}
       ${p.avisos?.length?`<ul class="avisos">${p.avisos.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}
      </div>
@@ -651,6 +755,9 @@ function pintarEditor(todo){
 }
 function cont(el,lim,id){const n=el.value.length,c=$("#"+id);c.textContent=`${fmt(n)} / ${fmt(lim)}${id=="c-copy"?" caracteres":""}`;c.classList.toggle("pasa",n>lim)}
 function cambiarRed(k){ed.red=k;pintarEditor(true)}
+async function otroCopy(){if(ed.sucio&&!await preguntar("¿Escribir otro copy?","Se pierden los cambios que todavía no guardaste.","Escribir otro","peligro"))return;
+  toast("Escribiendo…");const p=await api(`/api/pub/${ed.id}/copy`,{});ed.borr=JSON.parse(JSON.stringify(p.redes));ed.sucio=false;
+  toast(p.copy_fuente=="transcripción"?"Listo. Salió del audio: revísalo.":"Listo, copy nuevo desde el guion","ok");E=await api("/api/estado");pintar();pintarEditor(true)}
 function copiarATodas(){const t=ed.borr[ed.red].copy;Object.keys(ed.borr).forEach(k=>{if(k!=ed.red)ed.borr[k].copy=t});ed.sucio=true;toast("Copiado en las demás redes. Falta guardar.")}
 async function guardarEditor(silencio){
   const redes={};for(const [k,r] of Object.entries(ed.borr))redes[k]={activa:r.activa,copy:r.copy,...(k=="youtube"?{titulo:r.titulo||""}:{}),...(r.cuenta?{cuenta:r.cuenta}:{})};

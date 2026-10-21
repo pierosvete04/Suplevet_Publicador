@@ -73,6 +73,8 @@ CONFIG_DEFECTO = {
     "graph_version": "v23.0",
     "horarios_video": ["09:00", "12:00", "15:00", "18:00", "21:00"],
     "horario_carrusel": "13:00",
+    # sugerencias diarias: videos por cuenta al día, entre qué horas, cuentas que no reciben y días de aire por cuerpo
+    "sugeridor": {"por_dia": 10, "desde": "08:00", "hasta": "22:00", "apagados": [], "aire_cuerpo": 2},
     "youtube_cuenta": None,         # id del canal de YouTube por defecto
     "tiktok_cuenta": None,          # open_id de la cuenta de TikTok por defecto (hay varias en tokens.json)
     "tiktok_modo": "borrador",       # borrador: llega a la bandeja de TikTok y tú publicas desde el celular · directo

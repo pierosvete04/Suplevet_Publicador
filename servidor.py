@@ -16,10 +16,12 @@ from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import actualizador  # noqa: E402
+import copys  # noqa: E402
 import nucleo  # noqa: E402
 import pauta  # noqa: E402
 import produccion  # noqa: E402
 import redes  # noqa: E402
+import sugeridor  # noqa: E402
 from redes import publicadas, tiktok, youtube  # noqa: E402
 
 APP = Path(__file__).resolve().parent / "app.html"
@@ -127,6 +129,9 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._archivo(q.get("ruta", ""))
             if u.path == "/api/listos":
                 return self._json(produccion.listos(q.get("forzar") == "1"))
+            if u.path == "/api/sugerencias":
+                return self._json(sugeridor.planear(q.get("desde") or None, int(q.get("dias") or 1),
+                                                    [x for x in q.get("excluir", "").split("|") if x]))
             if u.path == "/api/publicadas":
                 return self._json(publicadas.todas(q.get("forzar") == "1"))
             if u.path == "/img":
@@ -174,7 +179,7 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(nucleo.importar(d["ruta"]))
             if u.path == "/api/config":
                 permitidas = {"simular", "tiktok_modo", "tiktok_privacidad", "youtube_privacidad",
-                              "horarios_video", "horario_carrusel", "pauta", "carpetas_produccion"}
+                              "horarios_video", "horario_carrusel", "pauta", "carpetas_produccion", "sugeridor"}
                 nucleo.guardar_config({k: v for k, v in d.items() if k in permitidas})
                 if "simular" in d:
                     nucleo.anotar("Modo simulación " + ("PRENDIDO" if d["simular"] else "APAGADO: ahora sí sale a redes"))
@@ -202,12 +207,18 @@ class Manejador(BaseHTTPRequestHandler):
             if u.path == "/api/listos/a_la_cola":
                 return self._json(produccion.a_la_cola(d.get("rutas") or [], d.get("redes") or [], d.get("cuentas"),
                                                        d.get("modo") or "repartir", d.get("desde"), d.get("por_dia"), d.get("aprobar") is True))
+            if u.path == "/api/sugerencias/aceptar":
+                return self._json(sugeridor.aceptar(d.get("items") or [], d.get("aprobar") is True))
+            if u.path == "/api/sugerencias/ya_salio":
+                return self._json(sugeridor.ya_salio(d["ruta"], d.get("si", True) is not False))
             if u.path == "/api/metricas":
                 return self._json(nucleo.recoger_metricas(d.get("semana")))
             if partes[:2] == ["api", "pub"]:
                 pid, accion = partes[2], (partes[3] if len(partes) > 3 else "cambiar")
                 if accion == "cambiar":
                     return self._json(nucleo.cambiar(pid, d))
+                if accion == "copy":   # escribir otro copy desde el guion
+                    return self._json(copys.rehacer(pid))
                 if accion == "borrar":
                     nucleo.borrar(pid)
                     return self._json({"ok": True})

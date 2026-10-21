@@ -4,6 +4,7 @@ Programa de Windows que sube el contenido de Suplevet a las redes, tanto orgáni
 
 | | Qué hace |
 |---|---|
+| **Hoy** | Te dice qué subir a cada cuenta (~10 videos diarios por cuenta), sin repetir un cuerpo en el día, y escribe el copy de cada uno desde su guion |
 | **Cola orgánica** | Trae los videos de V.FINALES (o un `paquete.json`), arma el calendario de la semana con el brief y publica sola a su hora lo que apruebas: Instagram, Facebook, TikTok y YouTube Shorts |
 | **Pauta** | Crea campañas en Meta Ads (Instagram + Facebook). Todo nace **en pausa**; solo gasta cuando aprietas «Activar» y confirmas el monto |
 | **Métricas** | Recoge vistas, me gusta, guardados, etc. y los deja en `metricas/<semana>.json` para el estratega |
@@ -46,6 +47,8 @@ Si instalas el programa **dentro de `2_PUBLICACION`**, usa directamente `2_PUBLI
 |---|---|
 | `lanzador.py` | El .exe: abre la ventana y reinicia al actualizar |
 | `servidor.py` | La API local (solo 127.0.0.1) |
+| `sugeridor.py` | Qué subir cada día a cada cuenta (pestaña Hoy) |
+| `copys.py` | Escribe el copy de cada video desde su guion (o su audio) |
 | `nucleo.py` | Cola, calendario, reglas del copy, reloj que publica y métricas |
 | `redes/` | Un conector por red: `meta.py` (IG + FB), `tiktok.py`, `youtube.py` |
 | `pauta.py` | Meta Ads: campaña → conjunto → anuncios, en pausa |

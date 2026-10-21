@@ -1,3 +1,13 @@
+## 1.3.0 · Qué subir hoy y copies desde el guion
+
+- Pestaña nueva **Hoy**: mira lo que está listo en producción y lo que ya salió, y arma la mezcla de cada cuenta (Instagram, Facebook, cada cuenta de TikTok y cada canal de YouTube). Por defecto 10 videos por cuenta al día, repartidos de 8:00 a 22:00.
+- Nunca pone dos videos del mismo cuerpo en una cuenta el mismo día, ni el mismo video dos veces en una cuenta. Primero va el cuerpo que esa cuenta tiene más olvidado y lo que no salió en ningún lado, y trata de no repetir el mismo video el mismo día en dos cuentas de la misma red.
+- Si no alcanzan los videos, no repite: dice cuántos cuerpos faltan para llegar a 10 diarios.
+- Cada sugerencia dice por qué se eligió. Se puede desmarcar, cambiar por otra o marcar como «ya lo subí a mano». Se planea 1, 3 o 7 días y se pasa todo a la cola con un botón.
+- Ajustes: videos por cuenta al día, primera y última hora, días antes de repetir un cuerpo y qué cuentas reciben.
+- **Copies automáticos**: el publicador escribe el copy de cada video desde su guion (`produccion.json`). Arriba va el hook directo con un emoji según el tipo, después 2 o 3 beneficios del cuerpo y el cierre con hashtags, con el largo de cada red y el título de YouTube. Cada cuenta recibe una variante distinta.
+- En el editor, «Escribir otro copy» saca otra variante. Los videos sin guion usan lo que se escucha en el audio (solo si está faster-whisper) y avisan para que los revises.
+
 ## 1.2.0 · Conectado con producción
 
 - Pestaña nueva **Listos**: muestra sola los videos que la Sala dejó en V.FINALES de cada producción (Drive «EDICIÓN DE VIDEOS» y la copia de la Sala). Ya no hace falta importar a mano.

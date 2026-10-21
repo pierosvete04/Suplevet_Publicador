@@ -17,3 +17,5 @@ build/
 _exe/
 *.spec
 cache_img/
+sugeridor.json
+transcripciones/
