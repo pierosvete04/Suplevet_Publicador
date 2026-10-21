@@ -1,3 +1,8 @@
+## 1.5.0 · Configuración como en las salas
+
+- La **Configuración** tiene el mismo diseño en las tres apps (menú a la izquierda, secciones a la derecha), con **Cuenta y dispositivos** y **Buscar actualizaciones**.
+- Nueva pestaña **Configuración**: tu cuenta, dispositivos y seguridad, un atajo a las redes conectadas y **Buscar actualizaciones**.
+
 ## 1.4.0 · Entrar con Google y dispositivos
 
 - **Entrar con Google**: al abrir, si no hay sesión, aparece la pantalla «Entrar con Google» (con el link de la carpeta del proyecto). La sesión queda abierta hasta que alguien toque «Cerrar sesión», y es una sola para las tres apps de la PC: si entras en una, ya entraste en todas.

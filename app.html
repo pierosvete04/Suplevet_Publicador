@@ -20,7 +20,29 @@
   --fondo:#f3f6fb;--superficie:#ffffff;--superficie-2:#eef3fb;--elevado:#e2eaf8;--texto:#0b1527;--suave:#5a6b88;--borde:#dce4f0;--borde-2:#c5d2e6;
   --ok:#15924f;--ok-fondo:#e3f5ec;--mal:#d6283f;--mal-fondo:#fce8e6;--aviso:#a35a00;--aviso-fondo:#fff3d6;--info:#0377b8;--info-fondo:#e3f1fb;
   --vidrio:rgba(255,255,255,.88);--tarjeta:#ffffff;--sombra:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);--sombra-alta:0 12px 32px rgba(16,24,40,.18);--tt:#111}
+:root{--bg:var(--fondo);--bg2:var(--superficie);--ink:var(--texto);--muted:var(--suave);--line:var(--borde);--line2:var(--borde-2);
+  --surface:var(--superficie);--surface2:var(--superficie-2);--accent:var(--navy);--accent2:var(--celeste);--err:var(--mal);--warn:var(--aviso)}
 *{box-sizing:border-box}
+/* Configuración: el mismo diseño en las tres apps (menú a la izquierda, secciones a la derecha) */
+.conf{display:grid;grid-template-columns:230px minmax(0,1fr);gap:18px;align-items:start}
+.conf-menu{position:sticky;top:120px;display:grid;gap:2px;padding:12px;border:1px solid var(--borde);border-radius:16px;background:var(--tarjeta)}
+.conf-tit{display:flex;gap:10px;align-items:center;padding:4px 6px 12px;margin-bottom:6px;border-bottom:1px solid var(--borde)}
+.conf-tit small{display:block;color:var(--suave);font-size:11.5px}
+.conf-ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--superficie-2);border:1px solid var(--borde-2);font-size:16px}
+.conf-menu a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;color:var(--suave);text-decoration:none;font-weight:600;font-size:13px}
+.conf-menu a:hover{background:var(--superficie-2);color:var(--texto)}
+.conf-menu a.activo{background:var(--superficie-2);color:var(--texto);box-shadow:inset 3px 0 0 var(--navy)}
+.conf-menu a .punto-estado{margin-left:auto}
+.punto-estado{width:8px;height:8px;border-radius:50%;background:var(--borde-2);flex:none}
+.punto-estado.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}.punto-estado.warn{background:var(--aviso);box-shadow:0 0 8px var(--aviso)}
+.conf-cuerpo{display:grid;gap:16px;min-width:0}
+.conf-sec{scroll-margin-top:130px;margin-bottom:0}
+.conf-cab{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.conf-cab>div:first-child{flex:1 1 320px}.conf-cab h2{margin:0 0 2px;font-size:16px}.conf-cab p{margin:0;font-size:12.5px;color:var(--suave)}
+.estado-grande{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--superficie-2);border:1px solid var(--borde);font-size:13.5px}
+.estado-grande:empty{display:none}
+.estado-grande b.dato{font:600 13px var(--mono);color:var(--celeste);padding:2px 8px;border-radius:7px;background:var(--superficie);border:1px solid var(--borde-2)}
+@media (max-width:860px){.conf{grid-template-columns:1fr}.conf-menu{position:static;grid-auto-flow:column;overflow-x:auto}.conf-tit{display:none}}
 html,body{margin:0}
 body{font:14px/1.5 var(--f);color:var(--texto);-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden;
   background:radial-gradient(1200px 600px at 85% -10%,rgba(61,139,255,.13),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(94,225,255,.07),transparent 60%),var(--fondo);background-attachment:fixed}
@@ -380,6 +402,7 @@ const IC={hoy:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
  pauta:'<path d="M3 11l15-6v14L3 13z"/><path d="M7 12v6a2 2 0 0 0 4 0v-4"/>',
  metricas:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
  conexiones:'<path d="M9 15l6-6"/><path d="M11 6l1-1a5 5 0 0 1 7 7l-1 1"/><path d="M13 18l-1 1a5 5 0 0 1-7-7l1-1"/>',
+ configuracion:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
  registro:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
  subir:'<path d="M12 16V4M6 10l6-6 6 6M4 20h16"/>',editar:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
  check:'<path d="M20 6L9 17l-5-5"/>',x:'<path d="M18 6L6 18M6 6l12 12"/>',enviar:'<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
@@ -403,7 +426,7 @@ const cap=t=>{t=String(t??"").replace(/_/g," ").trim();return t?t[0].toLocaleUpp
 const fmt=n=>NUM.format(n||0);
 
 /* ---------- Estado y utilidades ---------- */
-const TABS=[["hoy","Hoy"],["listos","Listos"],["cola","Cola"],["publicadas","Publicadas"],["pauta","Pauta"],["metricas","Métricas"],["conexiones","Conexiones"],["registro","Registro"]];
+const TABS=[["hoy","Hoy"],["listos","Listos"],["cola","Cola"],["publicadas","Publicadas"],["pauta","Pauta"],["metricas","Métricas"],["conexiones","Conexiones"],["registro","Registro"],["configuracion","Configuración"]];
 let E=null,tab=leer("tab")||"hoy",editando=false,filtro=leer("filtro")||"todas",busca="",ed=null,modo=leer("modo")||"lista",sel=null,semanaOff=0,PUB=null,cargandoPub=false;
 const F={red:"todas",clase:"todas",fmt:"todos"};
 function leer(k){try{return localStorage.getItem("pub_"+k)}catch(e){return null}}
@@ -424,7 +447,7 @@ function pintar(){
   $("#ver").textContent="v"+(E.version||"");
   $("#redes-top").innerHTML=Object.keys(REDES).map(k=>`<button onclick="ir('conexiones')" title="${REDES[k][1]}: ${E.conexiones[k]?.listo?"conectado":"falta conectar"}" aria-label="${REDES[k][1]}: ${E.conexiones[k]?.listo?"conectado":"falta conectar"}">${redIc(k,E.conexiones[k]?.listo?"":"apagada")}</button>`).join("");
   pintarMenu();
-  ({hoy,listos,publicadas,cola,pauta,metricas,conexiones,registro})[tab]();
+  ({hoy,listos,publicadas,cola,pauta,metricas,conexiones,registro,configuracion})[tab]();
   if(tab!="listos")$("#barra-l")?.remove();
   if(tab!="hoy")$("#barra-s")?.remove();
   if(ed)pintarEditor(false);
@@ -898,6 +921,38 @@ async function apagar(){if(await preguntar("¿Apagar el publicador?","Lo program
 
 /* ---------- Registro ---------- */
 let filtroLog="";
+function configuracion(){
+  if($("#confCuenta"))return;  /* ya está dibujada: no se repinta cada 15 s */
+  $("#main").innerHTML=`<div class="titulo-pag"><div><h1>Configuración</h1><p>De esta PC.</p></div></div>
+  <div class="conf">
+    <aside class="conf-menu" aria-label="Secciones de configuración">
+      <div class="conf-tit"><span class="conf-ico">⚙</span><div><b>Configuración</b><small>De esta PC</small></div></div>
+      <a href="#confCuenta" class="activo">👤 Cuenta y dispositivos <span class="punto-estado ok"></span></a>
+      <a href="#" onclick="event.preventDefault();ir('conexiones')">🔌 Redes conectadas</a>
+      <a href="#confAct">⟳ Actualizaciones <span class="punto-estado" id="confPAct"></span></a>
+    </aside>
+    <div class="conf-cuerpo">
+      <section class="caja conf-sec" id="confCuenta">
+        <div class="conf-cab"><div><h2>Cuenta y dispositivos</h2><p>Con qué cuenta de Google entraste, en qué PCs se abrió y cerrar sesión. Es la misma sesión de las tres apps.</p></div></div>
+        <div id="cfgCuenta"></div>
+      </section>
+      <section class="caja conf-sec" id="confAct">
+        <div class="conf-cab"><div><h2>Actualizaciones del sistema</h2><p>Versión instalada: <b>${esc(E.version||"—")}</b></p></div>
+          <button class="btn sec" onclick="buscarAct()">Buscar actualizaciones</button></div>
+        <div class="estado-grande" id="actResultado"></div>
+      </section>
+    </div>
+  </div>`;
+  Cuenta.pintarEn($("#cfgCuenta"));
+  document.querySelectorAll(".conf-menu a[href^='#conf']").forEach(a=>a.onclick=e=>{e.preventDefault();document.querySelectorAll(".conf-menu a").forEach(x=>x.classList.toggle("activo",x===a));$(a.getAttribute("href")).scrollIntoView({behavior:"smooth",block:"start"})});
+}
+async function buscarAct(){
+  const out=$("#actResultado");out.textContent="Buscando…";
+  try{const r=await (await fetch("/api/actualizacion?forzar=1")).json();
+    $("#confPAct").className="punto-estado "+(r.nueva?"warn":"ok");
+    out.innerHTML=r.error?esc(r.error):r.nueva?`Hay una versión nueva: <b class="dato">${esc(r.nueva)}</b>${r.completa?` · trae cambios grandes: baja el instalador completo`:` <button class="btn chico" onclick="actualizar()">Actualizar ahora</button>`}`:`Tienes la última versión <b class="dato">${esc(r.actual||E.version)}</b>`;
+    if(r.nueva){$("#act").style.display="flex";$("#act-txt").textContent=`Hay una versión nueva (${r.nueva}).`}
+  }catch(e){out.textContent="No pude revisar las actualizaciones."}}
 function registro(){
   const l=E.registro.slice().reverse().filter(x=>!filtroLog||x.toLowerCase().includes(filtroLog));
   $("#main").innerHTML=`<div class="titulo-pag"><div><h1>Registro</h1><p>Todo lo que hizo el publicador, lo más nuevo arriba.</p></div>
@@ -913,7 +968,7 @@ async function actualizar(){toast("Bajando la versión nueva…");await api("/ap
 document.addEventListener("focusin",e=>{if(e.target.matches("textarea,input,select"))editando=true});
 document.addEventListener("focusout",()=>{editando=!!ed});
 setInterval(()=>{if(!editando&&tab!="pauta")cargar()},15000);
-(async()=>{await Cuenta.iniciar({app:"Publicador",letra:"P",fondo:"linear-gradient(135deg,#047857,#10b981 60%,#a3e635)",lugar:$("#cuentaChip"),alVolver:()=>location.reload()});
+(async()=>{await Cuenta.iniciar({app:"Publicador",letra:"P",fondo:"linear-gradient(135deg,#047857,#10b981 60%,#a3e635)",lugar:$("#cuentaChip"),alVolver:()=>location.reload(),alAbrirCuenta:()=>ir("configuracion")});
 cargar(true);revisarAct();setInterval(revisarAct,36e5)})();
 </script>
 </body>

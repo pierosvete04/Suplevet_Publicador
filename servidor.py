@@ -133,7 +133,7 @@ class Manejador(BaseHTTPRequestHandler):
             if u.path == "/api/dispositivos":
                 return self._json({"dispositivos": cuenta.dispositivos(), "dias_nuevo": cuenta.DIAS_NUEVO})
             if u.path == "/api/actualizacion":
-                return self._json(actualizador.revisar())
+                return self._json(actualizador.revisar(forzar=q.get("forzar") == "1"))
             if u.path == "/api/pendientes":
                 ahora = __import__("datetime").datetime.now().strftime("%Y-%m-%dT%H:%M")
                 n = sum(1 for p in nucleo.cola()["publicaciones"] if p.get("aprobado") and p.get("fecha", "") > ahora
