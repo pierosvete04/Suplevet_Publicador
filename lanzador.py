@@ -20,6 +20,7 @@ LANZADOR_VERSION = "1.1.0"
 import ctypes, http.server, io, json, mimetypes, re, runpy, secrets, shutil, socket, socketserver  # noqa: E401,F401
 import subprocess, sys, tempfile, threading, time, traceback, uuid, webbrowser, zipfile  # noqa: E401,F401
 import urllib.error, urllib.parse, urllib.request  # noqa: E401,F401
+import base64, datetime, functools, getpass, html, platform, struct, uuid  # noqa: E401,F401  (los usa el código de app/: si falta uno, la app no arranca)
 import os
 from datetime import datetime, timedelta  # noqa: F401
 from pathlib import Path

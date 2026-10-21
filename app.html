@@ -360,6 +360,7 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
     <button id="modo" class="modo sim" onclick="ir('conexiones')" title="Se cambia en Conexiones"><span class="punto"></span><span id="modo-t">Simulación</span></button>
     <div class="redes-top" id="redes-top"></div>
     <span class="ver" id="ver"></span>
+    <span id="cuentaChip"></span>
     <button class="btn-tema" onclick="cambiarTema()" aria-label="Cambiar entre claro y oscuro" title="Claro u oscuro">◐</button>
   </div>
   <div class="aviso-act" id="act"><span id="act-txt"></span><button class="btn sec chico" onclick="actualizar()">Actualizar ahora</button></div>
@@ -371,6 +372,7 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
 <div class="visor-velo" id="visor" onclick="if(event.target==this)cerrarVisor()"><div class="visor-m" id="visor-m" role="dialog" aria-modal="true"></div></div>
 <div id="toasts" aria-live="polite"></div>
 <dialog id="dlg"><div class="dc"><h3 id="dlg-t"></h3><p id="dlg-p"></p></div><div class="dp"><button class="btn sec" id="dlg-no">Cancelar</button><button class="btn prim" id="dlg-si">Aceptar</button></div></dialog>
+<script src="/cuenta.js"></script>
 <script>
 /* ---------- Íconos (trazos tipo Lucide) ---------- */
 const IC={hoy:'<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>',
@@ -911,7 +913,8 @@ async function actualizar(){toast("Bajando la versión nueva…");await api("/ap
 document.addEventListener("focusin",e=>{if(e.target.matches("textarea,input,select"))editando=true});
 document.addEventListener("focusout",()=>{editando=!!ed});
 setInterval(()=>{if(!editando&&tab!="pauta")cargar()},15000);
-cargar(true);revisarAct();setInterval(revisarAct,36e5);
+(async()=>{await Cuenta.iniciar({app:"Publicador",letra:"P",fondo:"linear-gradient(135deg,#047857,#10b981 60%,#a3e635)",lugar:$("#cuentaChip"),alVolver:()=>location.reload()});
+cargar(true);revisarAct();setInterval(revisarAct,36e5)})();
 </script>
 </body>
 </html>

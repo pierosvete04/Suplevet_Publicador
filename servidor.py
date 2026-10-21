@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import actualizador  # noqa: E402
 import copys  # noqa: E402
+import cuenta  # noqa: E402
 import nucleo  # noqa: E402
 import pauta  # noqa: E402
 import produccion  # noqa: E402
@@ -118,6 +119,19 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._html(APP.read_text(encoding="utf-8"))
             if u.path == "/api/estado":
                 return self._json(estado())
+            if u.path == "/cuenta.js":
+                b = (Path(__file__).resolve().parent / "cuenta.js").read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/javascript; charset=utf-8")
+                self.send_header("Content-Length", str(len(b)))
+                self.end_headers()
+                self.wfile.write(b)
+                return None
+            if u.path == "/api/cuenta":  # la página pregunta cada minuto: de paso se anota esta PC (cada 10 min)
+                cuenta.latido()
+                return self._json(cuenta.estado())
+            if u.path == "/api/dispositivos":
+                return self._json({"dispositivos": cuenta.dispositivos(), "dias_nuevo": cuenta.DIAS_NUEVO})
             if u.path == "/api/actualizacion":
                 return self._json(actualizador.revisar())
             if u.path == "/api/pendientes":
@@ -167,6 +181,16 @@ class Manejador(BaseHTTPRequestHandler):
         d = json.loads(self.rfile.read(largo) or b"{}") if largo else {}
         partes = u.path.strip("/").split("/")   # api, pub, <id>, <accion>
         try:
+            if u.path == "/api/entrar":  # entrar con Google: sesión común de las tres apps
+                return self._json({"ok": True, "cuenta": cuenta.entrar(str(d.get("link", "")))})
+            if u.path == "/api/salir":
+                cuenta.cerrar_sesion()
+                return self._json({"ok": True})
+            if u.path == "/api/cerrar_dispositivo":
+                cuenta.cerrar_en(str(d["id"]))
+                return self._json({"ok": True})
+            if u.path == "/api/cerrar_otros":
+                return self._json({"ok": True, "cerrados": cuenta.cerrar_en_todas_menos_esta()})
             if u.path == "/api/adios":
                 nucleo.anotar("Publicador apagado")
                 threading.Timer(0.5, lambda: os._exit(0)).start()
@@ -250,6 +274,8 @@ def main():
     puerto = int(os.environ.get("PUBLICADOR_PUERTO") or nucleo.config()["puerto"])
     srv = ThreadingHTTPServer(("127.0.0.1", puerto), Manejador)
     nucleo.arrancar_reloj()
+    cuenta.iniciar("Publicador", nucleo.VERSION)
+    cuenta.latido(forzar=True)
     url = f"http://localhost:{puerto}"
     nucleo.anotar(f"Publicador abierto en {url} · simulación {'sí' if nucleo.config()['simular'] else 'NO'}")
     if "--sin-navegador" not in sys.argv:

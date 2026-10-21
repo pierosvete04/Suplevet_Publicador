@@ -51,7 +51,7 @@ jobs:
           New-Item -ItemType Directory -Force $app | Out-Null
           # todo el código menos el lanzador (ese va dentro del .exe): así un módulo nuevo nunca queda afuera
           Get-ChildItem *.py | Where-Object Name -ne "lanzador.py" | Copy-Item -Destination $app
-          Copy-Item app.html,VERSION,LANZADOR_MINIMO,LEEME.md -Destination $app
+          Copy-Item app.html,cuenta.js,VERSION,LANZADOR_MINIMO,LEEME.md -Destination $app
           Copy-Item redes -Destination $app -Recurse
           # ya con todo copiado: si falta un módulo propio que el código importa, el release no sale
           python instalador/revisar_app.py $app
