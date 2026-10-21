@@ -31,7 +31,7 @@ except Exception:  # noqa: BLE001
 
 PUERTO = int(os.environ.get("PUBLICADOR_PUERTO") or 8766)
 URL = f"http://127.0.0.1:{PUERTO}"
-TITULO = "Publicador Suplevet"
+TITULO = "Publicador"
 
 
 def base():

@@ -1,3 +1,7 @@
+## 1.3.2 · Nombre e ícono nuevos
+
+- Se llama **Publicador** (sin Suplevet) y tiene ícono nuevo: una **P** verde, de la misma familia que la Sala de edición (E) y la Sala de diseño (D). Para ver el ícono y el nombre nuevos en el escritorio hay que pasar una vez el instalador completo; borra solo el acceso directo viejo.
+
 ## 1.3.1 · Arreglo: la 1.3.0 no traía la pestaña Hoy ni los copies
 
 - La versión 1.3.0 se armó sin los archivos nuevos (sugerencias y copies), y el programa no arrancaba al actualizarse. Esta los trae.
