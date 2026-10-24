@@ -385,7 +385,7 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
     <span id="cuentaChip"></span>
     <button class="btn-tema" onclick="cambiarTema()" aria-label="Cambiar entre claro y oscuro" title="Claro u oscuro">◐</button>
   </div>
-  <div class="aviso-act" id="act"><span id="act-txt"></span><button class="btn sec chico" onclick="actualizar()">Actualizar ahora</button></div>
+  <div class="aviso-act" id="act"><span id="act-txt"></span><button class="btn sec chico" onclick="actualizar(event)">Actualizar ahora</button></div>
   <nav class="menu" id="nav" aria-label="Secciones"></nav>
 </header>
 <main id="main"></main>
@@ -950,7 +950,7 @@ async function buscarAct(){
   const out=$("#actResultado");out.textContent="Buscando…";
   try{const r=await (await fetch("/api/actualizacion?forzar=1")).json();
     $("#confPAct").className="punto-estado "+(r.nueva?"warn":"ok");
-    out.innerHTML=r.error?esc(r.error):r.nueva?`Hay una versión nueva: <b class="dato">${esc(r.nueva)}</b>${r.completa?` · trae cambios grandes: baja el instalador completo`:` <button class="btn chico" onclick="actualizar()">Actualizar ahora</button>`}`:`Tienes la última versión <b class="dato">${esc(r.actual||E.version)}</b>`;
+    out.innerHTML=r.error?esc(r.error):r.nueva?`Hay una versión nueva: <b class="dato">${esc(r.nueva)}</b>${r.completa?` · trae cambios grandes: baja el instalador completo`:` <button class="btn chico" onclick="actualizar(event)">Actualizar ahora</button>`}`:`Tienes la última versión <b class="dato">${esc(r.actual||E.version)}</b>`;
     if(r.nueva){$("#act").style.display="flex";$("#act-txt").textContent=`Hay una versión nueva (${r.nueva}).`}
   }catch(e){out.textContent="No pude revisar las actualizaciones."}}
 function registro(){
@@ -962,8 +962,9 @@ function registro(){
 }
 
 /* ---------- Actualizaciones ---------- */
-async function revisarAct(){try{const r=await (await fetch("/api/actualizacion")).json();if(r.nueva){$("#act").style.display="flex";$("#act-txt").textContent=`Hay una versión nueva (${r.nueva}).${r.completa?" Esta trae cambios grandes: baja el instalador completo.":""}`}}catch(e){}}
-async function actualizar(){toast("Bajando la versión nueva…");await api("/api/actualizar",{});toast("Listo, el publicador se reinicia…","ok");setTimeout(()=>location.reload(),6000)}
+let infoAct=null;
+async function revisarAct(){try{const r=infoAct=await (await fetch("/api/actualizacion")).json();if(r.nueva){$("#act").style.display="flex";$("#act-txt").textContent=`Hay una versión nueva (${r.nueva}).${r.completa?" Esta trae cambios grandes: baja el instalador completo.":""}`}}catch(e){}}
+async function actualizar(ev){try{await Actualizar.instalar({app:"el Publicador",nueva:infoAct?.nueva,version:"/api/actualizacion?forzar=1",botones:[ev?.target,...document.querySelectorAll('[onclick="actualizar(event)"]')]})}catch(e){toast("No se pudo actualizar: "+e.message,"mal")}}
 
 document.addEventListener("focusin",e=>{if(e.target.matches("textarea,input,select"))editando=true});
 document.addEventListener("focusout",()=>{editando=!!ed});

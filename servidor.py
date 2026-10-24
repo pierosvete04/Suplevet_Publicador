@@ -8,6 +8,7 @@ import mimetypes
 import os
 import sys
 import threading
+import time
 import traceback
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -58,6 +59,15 @@ def archivos_permitidos():
         if p.get("portada"):
             out.add(p["portada"])
     return out
+
+
+class Servidor(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
+            return  # la ventana se cerró o se recargó a mitad de una respuesta: no es un error
+        super().handle_error(request, client_address)
 
 
 class Manejador(BaseHTTPRequestHandler):
@@ -132,6 +142,8 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(cuenta.estado())
             if u.path == "/api/dispositivos":
                 return self._json({"dispositivos": cuenta.dispositivos(), "dias_nuevo": cuenta.DIAS_NUEVO})
+            if u.path == "/api/cuenta/carpetas":  # elegir la carpeta del proyecto (cuenta.js): las carpetas de la cuenta
+                return self._json({"ok": True, **cuenta.carpetas_para_elegir()})
             if u.path == "/api/actualizacion":
                 return self._json(actualizador.revisar(forzar=q.get("forzar") == "1"))
             if u.path == "/api/pendientes":
@@ -177,12 +189,21 @@ class Manejador(BaseHTTPRequestHandler):
 
     def do_POST(self):
         u = urlparse(self.path)
+        if self.client_address[0] not in ("127.0.0.1", "::1"):
+            return self._json({"error": "solo desde esta PC"}, 403)
+        # Una página de internet abierta en el navegador podría mandar órdenes a la app: el navegador siempre dice
+        # de qué página viene el pedido (Origin) y tiene que ser la app misma.
+        origen = self.headers.get("Origin")
+        if origen and origen != "null" and urlparse(origen).netloc.lower() != (self.headers.get("Host") or "").lower():
+            return self._json({"error": "pedido de otra página"}, 403)
         largo = int(self.headers.get("Content-Length") or 0)
         d = json.loads(self.rfile.read(largo) or b"{}") if largo else {}
         partes = u.path.strip("/").split("/")   # api, pub, <id>, <accion>
         try:
             if u.path == "/api/entrar":  # entrar con Google: sesión común de las tres apps
                 return self._json({"ok": True, "cuenta": cuenta.entrar(str(d.get("link", "")))})
+            if u.path == "/api/cuenta/primera":  # entrar y elegir (o crear) la carpeta del proyecto (cuenta.js)
+                return self._json({"ok": True, **cuenta.primera(d)})
             if u.path == "/api/salir":
                 cuenta.cerrar_sesion()
                 return self._json({"ok": True})
@@ -272,12 +293,14 @@ class Manejador(BaseHTTPRequestHandler):
 
 def main():
     puerto = int(os.environ.get("PUBLICADOR_PUERTO") or nucleo.config()["puerto"])
-    srv = ThreadingHTTPServer(("127.0.0.1", puerto), Manejador)
+    inicio = time.time()
+    srv = Servidor(("127.0.0.1", puerto), Manejador)
     nucleo.arrancar_reloj()
     cuenta.iniciar("Publicador", nucleo.VERSION)
     cuenta.latido(forzar=True)
     url = f"http://localhost:{puerto}"
     nucleo.anotar(f"Publicador abierto en {url} · simulación {'sí' if nucleo.config()['simular'] else 'NO'}")
+    print(f"Lista para usar en {time.time() - inicio:.1f} s", flush=True)
     if "--sin-navegador" not in sys.argv:
         webbrowser.open(url)
     srv.serve_forever()

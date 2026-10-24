@@ -1,3 +1,9 @@
+## 1.6.0 · Entrar y elegir la carpeta, actualizar más seguro
+
+- **Entrar y elegir la carpeta, paso a paso** (igual en las tres apps): entras con Google sin pegar ningún link, eliges la carpeta del equipo (una tuya, una compartida contigo, una nueva o con su link) y te dice cómo invitar al equipo como Editor. En **Configuración → Cuenta** está la carpeta, con «Cambiar de carpeta…».
+- **Actualizar más seguro**: si GitHub se corta, vuelve a intentar y, si hace falta, baja la versión por otro camino. Mientras se instala, el botón dice «⟳ Actualizando…» y una cortina tapa el programa hasta que la versión nueva arranca.
+- **Más seguridad**: el Publicador solo acepta órdenes de su propia ventana (una página de internet ya no puede mandarle nada).
+
 ## 1.5.0 · Configuración como en las salas
 
 - La **Configuración** tiene el mismo diseño en las tres apps (menú a la izquierda, secciones a la derecha), con **Cuenta y dispositivos** y **Buscar actualizaciones**.
