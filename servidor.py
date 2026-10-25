@@ -23,6 +23,7 @@ import nucleo  # noqa: E402
 import pauta  # noqa: E402
 import preparacion  # noqa: E402
 import produccion  # noqa: E402
+import salas  # noqa: E402
 import redes  # noqa: E402
 import sugeridor  # noqa: E402
 from redes import meta, publicadas, tiktok, youtube  # noqa: E402
@@ -170,6 +171,19 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json({"pendientes": n})
             if u.path == "/archivo":
                 return self._archivo(q.get("ruta", ""))
+            if u.path == "/mini":   # miniatura de Drive de un video sin portada (Subir contenido)
+                try:
+                    cuerpo = salas.miniatura(q.get("rel", "")).read_bytes()
+                except Exception:
+                    return self._json({"error": "sin miniatura"}, 404)
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Cache-Control", "max-age=86400")
+                self.send_header("Content-Length", str(len(cuerpo)))
+                self.end_headers()
+                return self.wfile.write(cuerpo)
+            if u.path == "/api/registro":   # Procesos › «Todo el historial»
+                return self._json({"lineas": nucleo.registro(min(int(q.get("n") or 1000), 5000))})
             if u.path == "/api/listos":
                 return self._json(produccion.listos(q.get("forzar") == "1"))
             if u.path == "/api/sugerencias":

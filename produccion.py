@@ -38,6 +38,7 @@ def _leer(forzar=False):
             en_cola["drive:" + rel] = p
     grupos = {}
     piezas = salas.piezas(forzar)
+    juntar(piezas)
     for x in piezas:
         ruta = x["archivos"][0] if x["tipo"] == "video" else str(Path(x["archivos"][0]).parent)
         x.update(ruta=ruta, bajado=all(os.path.isfile(a) for a in x["archivos"]),
@@ -52,6 +53,29 @@ def _leer(forzar=False):
     prods.sort(key=lambda p: p["reciente"], reverse=True)
     return {"producciones": prods, "semanas": salas.semanas(piezas), "drive": salas.estado(),
             "carpetas": [str(c) for c in carpetas()]}
+
+
+def juntar(piezas):
+    """Qué post va con qué video. Seguro: el post se hizo a partir de ese video en la Sala de diseño («video» en
+    pieza.json). Si no, el post dice qué cuerpos acompaña («acompaña»: C1…) y van los videos de ese cuerpo en su semana."""
+    videos = [x for x in piezas if x["tipo"] == "video"]
+    por_rel = {v["rel"]: v for v in videos}
+    for v in videos:
+        v["posts"] = []
+    for x in piezas:
+        if x["tipo"] == "video":
+            continue
+        con, como = [], ""
+        if x.get("video") in por_rel:
+            con, como = [por_rel[x["video"]]], "hecho con este video"
+        elif x.get("acompana"):
+            cuerpos = {str(c).upper() for c in x["acompana"]}
+            con = [v for v in videos if v.get("semana") == x.get("semana") and cuerpo_de(v) in cuerpos]
+            como = "mismo cuerpo y semana"
+        x["va_con"] = [{"codigo": v["codigo"], "rel": v["rel"], "proyecto": v["proyecto"]} for v in con]
+        x["va_con_como"] = como if con else ""
+        for v in con:
+            v["posts"].append({"codigo": x["codigo"], "titulo": x.get("titulo"), "rel": x["rel"], "como": como})
 
 
 def _ya(rutas, claves, en_cola):

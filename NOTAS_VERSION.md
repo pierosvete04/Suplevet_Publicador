@@ -1,3 +1,13 @@
+## 1.8.0 · Subir contenido más claro, Procesos arriba y logos de verdad
+
+- La pestaña **Listos** ahora se llama **Subir contenido**. Muestra solo lo terminado: los **videos finales** de la Sala de edición (carpeta V.FINALES; nada de partes sueltas ni clips) y los **posts y carruseles** de la Sala de diseño (carpeta FINAL).
+- Cada pieza dice de qué sala viene (**E** Sala de edición, **D** Sala de diseño) y en qué carpeta está. Los videos sin portada muestran su imagen de Drive.
+- **Qué post va con qué video**: el post dice «Va con: P04-C1-H1-CTA1» y el video dice «Tiene post». Sale de los posts hechos con «Crear con IA» a partir de un video en la Sala de diseño (desde su versión 0.10.2).
+- **Filtros más claros**: la semana (lunes a domingo, la misma en las tres apps: S03 = 19 – 25 oct) y de dónde viene (las dos salas, solo videos o solo posts, y el proyecto).
+- El **Registro** pasó al botón **☰ Procesos** de arriba, al lado de Simulación, como en la Sala de edición: lo que se está subiendo, los avisos del día, los errores y todo el historial, con buscador.
+- **Logos oficiales** de Instagram, Facebook, TikTok y YouTube.
+- La pestaña **Pauta** quedó oculta por ahora.
+
 ## 1.7.0 · Lee Drive como las salas, y más seguro al publicar
 
 - **Listos lee Drive directo**, con la misma cuenta de Google de las salas: los videos de la Sala de edición (V.FINALES, también dentro de cada día o sesión) y, por primera vez, los **posts y carruseles de la Sala de diseño** (DISEÑO/…/FINAL).

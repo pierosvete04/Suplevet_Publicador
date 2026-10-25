@@ -113,7 +113,7 @@ def _leer_drive():
     for i in INCLUIR:
         args += ["--include", i]
     lista = json.loads(cuenta.rc(*args, timeout=180) or "[]")
-    return [{"rel": x["Path"], "tam": x.get("Size"), "mod": (x.get("ModTime") or "")[:19]} for x in lista]
+    return [{"rel": x["Path"], "tam": x.get("Size"), "mod": (x.get("ModTime") or "")[:19], "id": x.get("ID")} for x in lista]
 
 
 def _leer_pc():
@@ -229,7 +229,8 @@ def piezas(forzar=False):
     for x in lista:
         rel = x["rel"]
         partes = rel.split("/")
-        if not rel.lower().endswith(EXT_VIDEO) or "POR_PARTES" in partes:
+        # solo los videos terminados: nada de las partes sueltas ni de los clips largos cortados (CLIPS …) ni lo reemplazado
+        if not rel.lower().endswith(EXT_VIDEO) or any(p == "POR_PARTES" or p.startswith(("CLIPS ", "_")) for p in partes[:-1]):
             continue
         i = next((k for k, p in enumerate(partes) if p in FINALES), None)
         if i is None or i == 0:
@@ -250,10 +251,12 @@ def piezas(forzar=False):
         semana = _semana_valida(de_paq.get("semana")) or _semana_valida(guion.get("semana")) or _semana_por_fecha(x["mod"])
         out.append({
             "rel": rel, "codigo": codigo, "tipo": "video", "semana": semana, "proyecto": proyecto,
+            "carpeta": "/".join(partes[i:-1]),   # «V.FINALES» o «V.FINALES/DIA_1»
             "produccion": partes[i - 1], "dia": de_paq.get("dia_sugerido") or dia,
             "cuerpo": de_paq.get("cuerpo"), "nivel": de_paq.get("nivel"), "publico": de_paq.get("publico"),
             "archivos": [str(ruta_local(rel, x["tam"]))], "drive": [rel],
             "portada": str(ruta_local(jpg["rel"], jpg["tam"])) if jpg else None,
+            "mini": rel if not jpg and x.get("id") else None,   # sin portada: la miniatura que hace Google Drive
             "copy": de_paq.get("copy_borrador") or (_leer_txt(txt["rel"], txt["tam"]) if txt else {}),
             "tamano_mb": round((x["tam"] or 0) / 1048576, 1), "creado": x["mod"][:16],
         })
@@ -283,6 +286,7 @@ def piezas(forzar=False):
             "tipo": "carrusel", "clase": "post" if len(fotos) == 1 else "carrusel", "semana": semana, "proyecto": "DISEÑO",
             "produccion": sem_carpeta, "dia": meta.get("dia") if isinstance(meta.get("dia"), int) else dia,
             "nivel": meta.get("nivel"), "publico": meta.get("publico"), "acompana": meta.get("acompaña") or [],
+            "video": meta.get("video") or "",   # el video de la Sala de edición con el que se hizo (ruta en Drive)
             "archivos": [str(ruta_local(a["rel"], a["tam"])) for a in fotos], "drive": [a["rel"] for a in fotos],
             "portada": str(ruta_local(fotos[0]["rel"], fotos[0]["tam"])),
             "copy": copy, "tamano_mb": round(sum(a["tam"] or 0 for a in fotos) / 1048576, 1),
@@ -348,6 +352,29 @@ def guiones():
             if f:
                 out[x["rel"].rsplit("/Guion/", 1)[0].split("/")[-1]] = f
     return out
+
+
+MINIS = nucleo.PUBLICACION / "miniaturas"
+
+
+def miniatura(rel):
+    """La miniatura que Google Drive arma para un video sin portada (se baja una vez y queda guardada)."""
+    import hashlib
+    import urllib.request
+    import cuenta
+    x = next((a for a in ultima() if a["rel"] == rel and a.get("id")), None)
+    if not x or not rel.lower().endswith(EXT_VIDEO):
+        raise FileNotFoundError("Ese video no está en Drive")
+    destino = MINIS / (hashlib.sha1(rel.encode()).hexdigest()[:16] + ".jpg")
+    if not destino.exists():
+        link = cuenta.api_drive(f"files/{x['id']}?fields=thumbnailLink").get("thumbnailLink", "")
+        if not link:
+            raise FileNotFoundError("Google Drive todavía no tiene miniatura de este video")
+        link = re.sub(r"=s\d+$", "=s640", link)
+        with urllib.request.urlopen(urllib.request.Request(link, headers={"Authorization": f"Bearer {cuenta.token()}"}), timeout=30) as r:
+            MINIS.mkdir(parents=True, exist_ok=True)
+            destino.write_bytes(r.read())
+    return destino
 
 
 def grupos():

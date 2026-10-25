@@ -129,10 +129,57 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 .est.simulado{background:var(--info-fondo);color:var(--info)}.est.error,.est.falta{background:var(--mal-fondo);color:var(--mal)}
 .est.publicando,.est.revisar,.est.atrasado{background:var(--aviso-fondo);color:var(--aviso)}
 .red-ic{width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font:800 10px inherit;font-family:inherit;flex:none}
-.red-ic.instagram{background:linear-gradient(45deg,#F58529,#DD2A7B 55%,#8134AF)}.red-ic.facebook{background:var(--fb)}
-.red-ic.tiktok{background:#111;box-shadow:inset -2px 0 0 #25F4EE,inset 2px 0 0 #FE2C55}.red-ic.youtube{background:var(--yt)}
+.red-ic svg{width:56%;height:56%;display:block}
+.red-ic.instagram{background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fdf497 5%,#fd5949 45%,#d6249f 60%,#285AEB 90%)}.red-ic.facebook{background:#0866FF}
+.red-ic.tiktok{background:#000}.red-ic.tiktok svg{filter:drop-shadow(-1px -1px 0 #25F4EE) drop-shadow(1px 1px 0 #FE2C55)}.red-ic.youtube{background:#FF0000}
 .red-ic.grande{width:40px;height:40px;font-size:14px}
 .red-ic.apagada{filter:grayscale(1);opacity:.45}
+/* Procesos (☰ arriba): copiado del panel de la Sala de edición */
+dialog.pop-notifs { position: fixed; inset: calc(var(--alto-header, 56px) + 6px) 16px auto auto; margin: 0; width: min(420px, calc(100vw - 32px)); max-height: min(640px, calc(100vh - 90px));
+  padding: 0; border-radius: 16px; border: 1px solid var(--line2); background: var(--superficie); color: var(--ink); box-shadow: 0 24px 60px rgba(0,0,0,.35); display: none; overflow: hidden; }
+dialog.pop-notifs[open] { display: flex; flex-direction: column; animation: pn-entra .16s ease-out; }
+dialog.pop-notifs::backdrop, :root[data-tema] dialog.pop-notifs::backdrop { background: rgba(0,0,0,.04); backdrop-filter: none; -webkit-backdrop-filter: none; }
+@keyframes pn-entra { from { opacity: 0; transform: translateY(-6px); } }
+.pn-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 14px 8px 16px; }
+.pn-cab h2 { margin: 0; } .pn-cab small { font-size: 12px; }
+.icono-x { padding: 3px 8px; }
+.pn-filtros { display: flex; gap: 4px; padding: 0 12px 10px; border-bottom: 1px solid var(--line); }
+.pn-filtros button { border: 1px solid transparent; background: none; color: var(--muted); font: 600 12px var(--f); padding: 4px 10px; border-radius: 99px; cursor: pointer; }
+.pn-filtros button:hover { color: var(--ink); }
+.pn-filtros button[aria-selected="true"] { color: var(--ink); background: var(--surface2); border-color: var(--line2); }
+.pn-filtros span { color: var(--muted); font-weight: 500; }
+.lista-notifs { overflow: auto; padding: 6px 8px; display: grid; gap: 2px; flex: 1; }
+.pn-dia { font: 600 10.5px var(--mono); letter-spacing: .02em; color: var(--muted); padding: 10px 8px 4px; }
+.notif { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: start; padding: 9px 8px; border-radius: 10px; font-size: 13px; position: relative; }
+.notif:hover { background: var(--surface2); }
+.notif.ok, .notif.err { color: var(--ink); }
+.notif .ni { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--surface2); border: 1px solid var(--line2); color: var(--muted); }
+.notif.ok .ni { color: var(--ok); border-color: rgba(74,222,155,.45); background: rgba(74,222,155,.08); }
+.notif.err .ni { color: var(--err); border-color: rgba(255,107,125,.45); background: rgba(255,107,125,.08); }
+.notif .nt { min-width: 0; overflow-wrap: anywhere; line-height: 1.4; } .notif .nt small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.notif.nueva .nt { font-weight: 600; }
+.notif.nueva::after { content: ""; position: absolute; left: 0; top: 50%; width: 3px; height: 60%; transform: translateY(-50%); border-radius: 3px; background: var(--accent2); }
+.notif .nx { opacity: 0; border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 6px; }
+.notif:hover .nx, .notif .nx:focus-visible { opacity: 1; } .notif .nx:hover { color: var(--ink); background: var(--elevado); }
+.pn-vacio { text-align: center; padding: 34px 16px; color: var(--muted); font-size: 13px; }
+.pn-vacio span { display: block; font-size: 28px; margin-bottom: 6px; opacity: .6; }
+.pn-pie { padding: 8px 12px; border-top: 1px solid var(--line); display: flex; justify-content: flex-end; }
+/* Procesos: el mismo panel que Notificaciones, bajo su botón */
+.notif.warn .ni { color: var(--warn); border-color: rgba(255,196,87,.45); background: rgba(255,196,87,.08); }
+.notif .nm { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted); font-size: 12px; margin-top: 3px; font-weight: 400; }
+.pn-vivo { margin: 10px 12px 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line2); background: var(--surface2); display: grid; gap: 6px; font-size: 13px; }
+.pn-vivo .fila { justify-content: space-between; gap: 10px; flex-wrap: nowrap; }
+.pn-vivo b { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pn-vivo .msg { overflow-wrap: anywhere; line-height: 1.4; }
+.pn-vivo small { color: var(--muted); font-size: 11.5px; }
+.pn-vivo details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.pn-vivo pre { margin: 6px 0 0; font: 11px/1.5 var(--mono); color: var(--muted); max-height: 180px; overflow: auto; white-space: pre-wrap; }
+.pn-pie.izq { display: block; font-size: 12px; color: var(--muted); line-height: 1.6; }
+.pn-pie.izq b { color: var(--ink); }
+.rueda{width:16px;height:16px;flex:none;border-radius:50%;border:3px solid rgba(61,139,255,.22);border-top-color:var(--accent2);animation:girar-p .8s linear infinite}@keyframes girar-p{to{transform:rotate(360deg)}}
+.pn-busca{padding:8px 12px 0}.pn-busca input{width:100%}
+.log-det{margin:6px 0 0;font:11px/1.5 var(--mono);color:var(--muted);max-height:160px;overflow:auto;white-space:pre-wrap}
+.notif .nt time{font:600 11px var(--mono);color:var(--muted);margin-right:6px}
 
 /* ---------- Cola ---------- */
 .herr{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -255,6 +302,12 @@ textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
 
 /* ---------- Listos (desde producción) ---------- */
 .rej-listos{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.filtros-l{display:grid;gap:10px;margin:0 0 16px;padding:12px 14px;border:1px solid var(--borde);border-radius:var(--r);background:var(--tarjeta)}
+.fl-g{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.fl-g .bl-t{min-width:72px}.fl-ayuda{margin:0;font-size:12px}
+.sala-l{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font:800 11px var(--f);color:#fff;flex:none;margin-right:4px}
+.sala-l.e{background:linear-gradient(135deg,#1d4ed8,#3d8bff 55%,#5ee1ff)}.sala-l.d{background:linear-gradient(135deg,#6d28d9,#a855f7 60%,#f0abfc)}
+.sec-t .sala-l{width:24px;height:24px;font-size:12px}
+.origen-l{display:block;color:var(--suave);font-size:11.5px}.match-l{display:block;color:var(--info);font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .en-drive{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;padding:12px;text-align:center;color:var(--suave);background:var(--superficie-2);font-size:13px;font-weight:600}.en-drive small{font-weight:400;font-size:11px}.en-drive svg{width:26px;height:26px;opacity:.7}
 .listo{position:relative;border-radius:10px;overflow:hidden;background:#000;border:2px solid transparent;transition:border-color .15s,transform .1s}
 .listo.on{border-color:#3d8bff;box-shadow:0 0 0 3px rgba(61,139,255,.3)}
@@ -396,6 +449,7 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
       <div class="app-tit"><span class="app-nombre">Publicador</span><h1 class="app-titulo">Antena</h1></div></div>
     <div class="app-iconos">
       <button id="modo" class="modo sim" onclick="ir('conexiones')" title="Se cambia en Conexiones"><span class="punto"></span><span id="modo-t">Simulación</span></button>
+      <button class="app-ico solo" id="verProcesos" type="button" onclick="abrirProcesos()" title="Procesos: lo que está haciendo el Publicador y todo lo que hizo" aria-label="Procesos">☰<span class="app-punto" id="puntoProceso" hidden></span></button>
       <div class="redes-top" id="redes-top"></div>
       <span id="cuentaChip"></span>
     </div>
@@ -408,6 +462,20 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
 <aside class="panel" id="panel" aria-label="Editar pieza"></aside>
 <div class="visor-velo" id="visor" onclick="if(event.target==this)cerrarVisor()"><div class="visor-m" id="visor-m" role="dialog" aria-modal="true"></div></div>
 <div id="toasts" aria-live="polite"></div>
+<dialog id="dlgProcesos" class="pop-notifs" aria-labelledby="procTit">
+  <div class="pn-cab">
+    <div><h2 id="procTit">Procesos</h2><small class="muted" id="procResumen"></small></div>
+    <button class="btn sec chico icono-x" id="procCerrar" type="button" onclick="$('#dlgProcesos').close()" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="pn-filtros" role="tablist" aria-label="Qué procesos ver">
+    <button role="tab" data-pf="recientes" aria-selected="true">Recientes</button>
+    <button role="tab" data-pf="errores" aria-selected="false">Errores</button>
+    <button role="tab" data-pf="todo" aria-selected="false">Todo el historial</button>
+  </div>
+  <div class="pn-busca"><input type="search" id="procBusca" placeholder="Buscar (ej.: tiktok, P04)" aria-label="Buscar en los procesos"></div>
+  <div id="procActual"></div>
+  <div id="procHistorial" class="lista-notifs"></div>
+</dialog>
 <dialog id="dlg"><div class="dc"><h3 id="dlg-t"></h3><p id="dlg-p"></p></div><div class="dp"><button class="btn sec" id="dlg-no">Cancelar</button><button class="btn prim" id="dlg-si">Aceptar</button></div></dialog>
 <script src="/cuenta.js"></script>
 <script>
@@ -432,7 +500,9 @@ const IC={preparacion:'<path d="M9 4h6v3H9zM7 5H5v16h14V5h-2"/><path d="M8.5 12l
  alerta:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'};
 const ic=(n,c="")=>`<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]||""}</svg>`;
 const REDES={instagram:["IG","Instagram"],facebook:["FB","Facebook"],tiktok:["TT","TikTok"],youtube:["YT","YouTube"]};
-const redIc=(k,c="")=>`<span class="red-ic ${k} ${c}" title="${REDES[k]?.[1]||k}">${REDES[k]?.[0]||k.slice(0,2).toUpperCase()}</span>`;
+/* Logos oficiales de cada red (Simple Icons, simpleicons.org, CC0), solo para identificarlas */
+const LOGO={instagram:"M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077",facebook:"M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z",tiktok:"M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z",youtube:"M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"};
+const redIc=(k,c="")=>`<span class="red-ic ${k} ${c}" title="${REDES[k]?.[1]||k}" role="img" aria-label="${REDES[k]?.[1]||k}">${LOGO[k]?`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${LOGO[k]}"/></svg>`:(REDES[k]?.[0]||k.slice(0,2).toUpperCase())}</span>`;
 const LIMITE={instagram:2200,facebook:63000,tiktok:2200,youtube:5000};
 const ESTADO={pendiente:"Pendiente",publicando:"Subiendo",publicado:"Publicado",simulado:"Simulado",error:"Error",revisar:"Revisar",atrasado:"Atrasado"};
 const REINTENTAR=["error","revisar","atrasado"];   /* lo mismo que nucleo.REINTENTABLES */
@@ -442,8 +512,11 @@ const cap=t=>{t=String(t??"").replace(/_/g," ").trim();return t?t[0].toLocaleUpp
 const fmt=n=>NUM.format(n||0);
 
 /* ---------- Estado y utilidades ---------- */
-const TABS=[["hoy","Hoy"],["listos","Listos"],["cola","Cola"],["publicadas","Publicadas"],["pauta","Pauta"],["metricas","Métricas"],["conexiones","Conexiones"],["preparacion","Preparación"],["registro","Registro"],["configuracion","Configuración"]];
-let E=null,tab=leer("tab")||"hoy",editando=false,filtro=leer("filtro")||"todas",busca="",ed=null,modo=leer("modo")||"lista",sel=null,semanaOff=0,PUB=null,cargandoPub=false;
+/* Pauta está oculta por ahora (el código sigue). Registro es el panel ☰ Procesos de arriba, como en la Sala de edición.
+   Configuración se abre desde el menú de la cuenta. */
+const MOSTRAR_PAUTA=false;
+const TABS=[["hoy","Hoy"],["listos","Subir contenido"],["cola","Cola"],["publicadas","Publicadas"],...(MOSTRAR_PAUTA?[["pauta","Pauta"]]:[]),["metricas","Métricas"],["conexiones","Conexiones"],["preparacion","Preparación"]];
+let E=null,tab=["pauta","registro"].includes(leer("tab"))&&!MOSTRAR_PAUTA?"hoy":leer("tab")||"hoy",editando=false,filtro=leer("filtro")||"todas",busca="",ed=null,modo=leer("modo")||"lista",sel=null,semanaOff=0,PUB=null,cargandoPub=false;
 const F={red:"todas",clase:"todas",fmt:"todos"};
 function leer(k){try{return localStorage.getItem("pub_"+k)}catch(e){return null}}
 function guardarLocal(k,v){try{localStorage.setItem("pub_"+k,v)}catch(e){}}
@@ -465,6 +538,7 @@ function pintar(){
   if(tab!="listos")$("#barra-l")?.remove();
   if(tab!="hoy")$("#barra-s")?.remove();
   if(ed)pintarEditor(false);
+  if($("#dlgProcesos").open)pintarProcesos();else $("#puntoProceso").hidden=!E.cola.publicaciones.some(p=>Object.values(p.redes).some(r=>r.estado=="publicando"));
 }
 function pintarMenu(){
   const porRevisar=E.cola.publicaciones.filter(p=>datosCola(p).est[0]=="rev").length,nuevos=LIS?nuevosListos():0;   /* el mismo número que dice la Cola */
@@ -553,35 +627,45 @@ const OPC={redes:null,cuentas:{},modo:"repartir",desde:null,por_dia:5,aprobar:fa
 async function traerListos(forzar){if(cargandoLis)return;cargandoLis=true;if(tab=="listos")listos();
   try{LIS=await api("/api/listos"+(forzar?"?forzar=1":""))}catch(e){LIS=LIS||{producciones:[],carpetas:[]}}finally{cargandoLis=false;if(tab=="listos")listos();pintarMenu()}}
 function nuevosListos(){return(LIS?.producciones||[]).reduce((a,p)=>a+p.piezas.filter(x=>!x.en_cola).length,0)}
-/* Semana y proyecto elegidos en Listos (la semana es lo que une las tres apps: S03 = lunes 19/10) */
-const FL={semana:null,proyecto:""};
+/* Subir contenido: la semana (lunes a domingo, la misma cuenta que las dos salas: S03 = 19–25 oct) y de qué sala viene */
+const FL={semana:null,origen:"",proyecto:""};
 function semanaDeHoy(){const h=fechaLocal(new Date());return(LIS?.semanas||[]).find(x=>x.desde<=h&&h<=x.hasta)?.codigo}
-function piezasVisibles(prod){return prod.piezas.filter(x=>!FL.semana||x.semana==FL.semana)}
+const rangoSem=x=>{const f=d=>new Date(d+"T12:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"}).replace(".","");return`${f(x.desde)} – ${f(x.hasta)}`};
+const origenDe=prod=>prod.tipo=="diseno"?"diseno":"edicion";
+function piezasVisibles(prod){return(!FL.origen||origenDe(prod)==FL.origen)&&(!FL.proyecto||prod.nombre==FL.proyecto||origenDe(prod)=="diseno")?prod.piezas.filter(x=>!FL.semana||x.semana==FL.semana):[]}
 function listos(){
   if(!LIS&&!cargandoLis){traerListos();return}
   if(OPC.redes==null)OPC.redes=Object.keys(REDES).filter(k=>E.conexiones[k]?.listo);
   if(!OPC.desde)OPC.desde=manana();
   const dr=LIS?.drive||{};
   const origen=!LIS?"":dr.fuente=="drive"?`Leído de Drive ${dr.leido?"a las "+esc(dr.leido.slice(11)):""}`:dr.fuente=="guardado"?`Sin conexión con Drive: muestro lo último que leí${dr.error?" ("+esc(dr.error)+")":""}`:"Sin cuenta de Google: miro solo las carpetas de esta PC";
-  const cab=`<div class="titulo-pag"><div><h1>Listos para publicar</h1><p>Lo que la Sala de edición dejó en V.FINALES y la Sala de diseño en FINAL. Elige la semana, marca las piezas, las redes y cuándo salen, y pasan juntas a la cola.</p>${origen?`<p class="suave" style="margin-top:4px">${origen}</p>`:""}</div>
+  const cab=`<div class="titulo-pag"><div><h1>Subir contenido</h1><p>Lo terminado en las dos salas: los <b>videos finales</b> de la Sala de edición (carpeta V.FINALES) y los <b>posts y carruseles</b> de la Sala de diseño (carpeta FINAL). Marca lo que quieres subir, elige las redes y cuándo, y pasa a la cola.</p>${origen?`<p class="suave" style="margin-top:4px">${origen}</p>`:""}</div>
    <div class="acciones"><button class="btn sec" onclick="traerListos(true)" ${cargandoLis?"disabled":""}>${ic("refrescar")}${cargandoLis?"Buscando…":"Buscar de nuevo"}</button></div></div>`;
   if(!LIS){$("#main").innerHTML=cab+`<div class="rej">${Array.from({length:8},()=>`<div class="esqueleto" style="aspect-ratio:9/16"></div>`).join("")}</div>`;return}
-  if(!LIS.producciones.length){$("#main").innerHTML=cab+`<div class="caja vacio">${ic("carpeta")}<h3>No encontré nada listo</h3><p>${dr.conectado?"En el proyecto de Drive no hay videos en V.FINALES ni piezas en DISEÑO/…/FINAL todavía.":"Entra con la cuenta de Google del proyecto (menú de la cuenta) para leer Drive, o pon la carpeta en Conexiones → Carpetas de producción."}</p></div>`;return}
-  if(FL.semana==null)FL.semana=(LIS.semanas.find(x=>x.codigo==semanaDeHoy()&&x.piezas)||LIS.semanas.find(x=>x.piezas))?.codigo||"";
-  const prods=LIS.producciones.filter(p=>!FL.proyecto||p.nombre==FL.proyecto).map(p=>({...p,piezas:piezasVisibles(p)})).filter(p=>p.piezas.length);
-  const filtros=`<div class="fila" style="gap:10px;flex-wrap:wrap;margin:0 0 14px">
-    <label class="campo" style="margin:0">Semana<select onchange="FL.semana=this.value;selL.clear();listos()">
-      <option value="" ${!FL.semana?"selected":""}>Todas las semanas</option>
-      ${LIS.semanas.map(x=>`<option value="${esc(x.codigo)}" ${x.codigo==FL.semana?"selected":""}>${esc(x.nombre)}${x.codigo==semanaDeHoy()?" (esta semana)":""} · ${x.piezas}</option>`).join("")}</select></label>
-    <label class="campo" style="margin:0">Proyecto<select onchange="FL.proyecto=this.value;listos()">
-      <option value="" ${!FL.proyecto?"selected":""}>Todos</option>
-      ${LIS.producciones.map(p=>`<option value="${esc(p.nombre)}" ${p.nombre==FL.proyecto?"selected":""}>${esc(cap(p.nombre))} · ${piezasVisibles(p).length}</option>`).join("")}</select></label></div>`;
+  if(!LIS.producciones.length){$("#main").innerHTML=cab+`<div class="caja vacio">${ic("carpeta")}<h3>No encontré nada terminado</h3><p>${dr.conectado?"En el proyecto de Drive no hay videos en V.FINALES ni piezas en DISEÑO/…/FINAL todavía.":"Entra con la cuenta de Google del proyecto (menú de la cuenta) para leer Drive, o pon la carpeta en Conexiones → Carpetas de producción."}</p></div>`;return}
+  const hoyS=semanaDeHoy();
+  if(FL.semana==null)FL.semana=(LIS.semanas.find(x=>x.codigo==hoyS&&x.piezas)||LIS.semanas.find(x=>x.piezas))?.codigo||"";
+  const enSem=prod=>prod.piezas.filter(x=>!FL.semana||x.semana==FL.semana).length;
+  const nEd=LIS.producciones.filter(p=>origenDe(p)=="edicion").reduce((a,p)=>a+enSem(p),0),nDi=LIS.producciones.filter(p=>origenDe(p)=="diseno").reduce((a,p)=>a+enSem(p),0);
+  const proyectos=LIS.producciones.filter(p=>origenDe(p)=="edicion"&&enSem(p));
+  const chip=(on,txt,acc,n)=>`<button class="ch ${on?"on":""}" aria-pressed="${on}" onclick="${acc}">${txt}${n!=null?` <span class="suave">${n}</span>`:""}</button>`;
+  const filtros=`<div class="filtros-l">
+    <div class="fl-g"><span class="bl-t">Semana</span>
+      ${LIS.semanas.filter(x=>x.piezas||x.codigo==hoyS).map(x=>chip(FL.semana==x.codigo,`<b>${esc(x.codigo)}</b> ${rangoSem(x)}${x.codigo==hoyS?" · esta semana":""}`,`FL.semana='${x.codigo}';selL.clear();listos()`,x.piezas)).join("")}
+      ${chip(!FL.semana,"Todas",`FL.semana='';listos()`)}</div>
+    <div class="fl-g"><span class="bl-t">De dónde</span>
+      ${chip(!FL.origen,"Las dos salas",`FL.origen='';FL.proyecto='';listos()`,nEd+nDi)}
+      ${chip(FL.origen=="edicion",`<span class="sala-l e">E</span>Sala de edición · videos`,`FL.origen='edicion';listos()`,nEd)}
+      ${chip(FL.origen=="diseno",`<span class="sala-l d">D</span>Sala de diseño · posts`,`FL.origen='diseno';FL.proyecto='';listos()`,nDi)}
+      ${FL.origen!="diseno"&&proyectos.length>1?`<select aria-label="Proyecto de la Sala de edición" onchange="FL.proyecto=this.value;listos()"><option value="">Todos los proyectos</option>${proyectos.map(p=>`<option value="${esc(p.nombre)}" ${p.nombre==FL.proyecto?"selected":""}>${esc(cap(p.nombre))} · ${enSem(p)}</option>`).join("")}</select>`:""}</div>
+    <p class="suave fl-ayuda">La semana va de lunes a domingo y es la misma en las tres apps: la del brief de la estrategia, la carpeta de la Sala de diseño y la fecha en que la Sala de edición exportó el video.</p></div>`;
+  const prods=LIS.producciones.map(p=>({...p,piezas:piezasVisibles(p)})).filter(p=>p.piezas.length);
   let h=cab+filtros;
-  if(!prods.length)h+=`<div class="caja vacio">${ic("carpeta")}<h3>Nada listo ${FL.semana?"en la "+esc(FL.semana):""}</h3><p>Elige otra semana u otro proyecto.</p></div>`;
+  if(!prods.length)h+=`<div class="caja vacio">${ic("carpeta")}<h3>Nada terminado ${FL.semana?"en la "+esc(FL.semana):""}</h3><p>Elige otra semana o «Las dos salas».</p></div>`;
   for(const prod of prods){
-    const nuevos=prod.piezas.filter(x=>!x.en_cola),todosSel=nuevos.length&&nuevos.every(x=>selL.has(x.ruta));
-    h+=`<div class="sec-t"><h2>${esc(cap(prod.nombre))}</h2><span class="etq">${prod.piezas.length} ${prod.tipo=="diseno"?"piezas":"listos"} · ${nuevos.length} nuevos</span>
-     ${nuevos.length?`<button class="btn sec chico" onclick="marcarProd('${encodeURIComponent(prod.nombre)}',${!todosSel})">${ic("check")}${todosSel?"Quitar selección":`Marcar los ${nuevos.length} nuevos`}</button>`:""}</div>
+    const nuevos=prod.piezas.filter(x=>!x.en_cola),todosSel=nuevos.length&&nuevos.every(x=>selL.has(x.ruta)),d=origenDe(prod)=="diseno";
+    h+=`<div class="sec-t"><span class="sala-l ${d?"d":"e"}" title="${d?"Sala de diseño":"Sala de edición"}">${d?"D":"E"}</span><h2>${d?"Sala de diseño · posts y carruseles":`Sala de edición · ${esc(cap(prod.nombre))}`}</h2><span class="etq">${prod.piezas.length} ${d?"piezas":"videos finales"} · ${nuevos.length} sin subir</span>
+     ${nuevos.length?`<button class="btn sec chico" onclick="marcarProd('${encodeURIComponent(prod.nombre)}',${!todosSel})">${ic("check")}${todosSel?"Quitar selección":`Marcar los ${nuevos.length}`}</button>`:""}</div>
      <div class="rej rej-listos">${prod.piezas.map(tarjetaListo).join("")}</div>`;
   }
   $("#main").innerHTML=h+(selL.size?`<div class="espacio-barra"></div>`:"");
@@ -589,7 +673,7 @@ function listos(){
 }
 function tarjetaListo(x){
   const on=selL.has(x.ruta),ya=x.en_cola;
-  const media=x.portada?`<img src="${arc(x.portada)}" alt="" loading="lazy">`:x.bajado?`<video src="${arc(x.archivos[0])}#t=1" muted preload="metadata"></video>`
+  const media=x.portada?`<img src="${arc(x.portada)}" alt="" loading="lazy">`:x.mini?`<img src="/mini?rel=${encodeURIComponent(x.mini)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'en-drive',textContent:'Video final en Drive'}))">`:x.bajado?`<video src="${arc(x.archivos[0])}#t=1" muted preload="metadata"></video>`
    :`<span class="en-drive">${ic("carpeta")}<span>En Drive</span><small>Se baja al verlo o al publicarlo</small></span>`;
   return`<div class="listo ${on?"on":""} ${ya?"ya":""}" style="aspect-ratio:${x.tipo=="video"?"9/16":"4/5"}">
    <button class="listo-caja" onclick="${ya?`abrirEditor('${ya.id}')`:`marcar('${encodeURIComponent(x.ruta)}')`}" aria-pressed="${on}" aria-label="${ya?"Abrir en la cola":"Marcar"} ${esc(x.codigo)}">${media}</button>
@@ -597,6 +681,9 @@ function tarjetaListo(x){
    ${x.tipo=="carrusel"?`<span class="tipo-l">${x.clase=="post"?"Post":"▣ "+x.archivos.length}</span>`:""}
    <button class="jugar-l" onclick="verListo('${encodeURIComponent(x.ruta)}')" aria-label="Ver ${esc(x.codigo)}" title="Ver">${x.tipo=="video"?"▶":ic("ojo")}</button>
    <div class="pie-l"><b title="${esc(x.titulo||x.codigo)}">${esc(x.titulo||x.codigo)}</b>
+    <span class="origen-l">${x.tipo=="video"?`Video final · ${esc(x.carpeta||"V.FINALES")}`:`${x.clase=="post"?"Post":"Carrusel"} · ${esc(x.semana||"")}${x.dia?" · "+["","lun","mar","mié","jue","vie","sáb","dom"][x.dia]:""}`}</span>
+    ${x.tipo=="video"&&x.posts?.length?`<span class="match-l" title="${esc(x.posts.map(z=>z.titulo||z.codigo).join(", "))}">🔗 Tiene post: ${esc(x.posts[0].titulo||x.posts[0].codigo)}${x.posts.length>1?` +${x.posts.length-1}`:""}</span>`:""}
+    ${x.tipo!="video"?(x.va_con?.length?`<span class="match-l" title="${esc(x.va_con_como+": "+x.va_con.map(z=>z.codigo).join(", "))}">🔗 Va con: ${esc(x.va_con[0].codigo)}${x.va_con.length>1?` +${x.va_con.length-1}`:""}</span>`:`<span class="origen-l">Sin video asociado</span>`):""}
     ${ya?`<span class="est-c ${ya.aprobado?"apr":"rev"}">En la cola · ${esc(cuando({fecha:ya.fecha}))}</span>`:`<span>${x.copy&&Object.keys(x.copy).length?"Con copy":"Sin copy"} · ${x.tamano_mb} MB</span>`}</div></div>`}
 function marcar(r){r=decodeURIComponent(r);selL.has(r)?selL.delete(r):selL.add(r);listos()}
 function marcarProd(n,si){const prod=LIS.producciones.find(p=>p.nombre==decodeURIComponent(n));piezasVisibles(prod).filter(x=>!x.en_cola).forEach(x=>si?selL.add(x.ruta):selL.delete(x.ruta));listos()}
@@ -1015,10 +1102,10 @@ async function preparacion(recargar){
   $("#main").innerHTML=`<div class="titulo-pag"><div><h1>Preparación</h1><p>Deja listo el Publicador para conectar las redes, sin conectar nada todavía. Cada persona usa las llaves de sus propias apps de desarrollador: quedan solo en esta PC (en <code>${esc(P.carpeta)}</code>), nunca en Drive ni en GitHub.</p></div>
     <span class="chip"><b>${P.listas} de ${P.redes.length}</b>listas para conectar</span></div>
     ${P.redes.map(caja).join("")}
-    <details class="caja prep-red" data-red="anuncios" data-borrador><summary><b>Anuncios de Meta (opcional)</b> · solo para la pestaña Pauta</summary>
+    ${MOSTRAR_PAUTA?"":"<!--"}<details class="caja prep-red" data-red="anuncios" data-borrador><summary><b>Anuncios de Meta (opcional)</b> · solo para la pestaña Pauta</summary>
       <p class="suave">La pauta usa el token de un usuario del sistema del Administrador comercial, con su cuenta publicitaria.</p>
       <div class="prep-llaves">${P.anuncios.map(campo).join("")}</div>
-      <div class="fila" style="margin-top:10px"><button class="btn sec" onclick="guardarLlaves('anuncios')">${ic("check")}Guardar</button></div></details>
+      <div class="fila" style="margin-top:10px"><button class="btn sec" onclick="guardarLlaves('anuncios')">${ic("check")}Guardar</button></div></details>${MOSTRAR_PAUTA?"":"-->"}
     <details class="caja prep-red" data-red="extra" data-borrador><summary><b>Avanzado</b> · otra dirección de vuelta</summary>
       <p class="suave">Solo si la red no acepta la dirección de esta PC (por ejemplo, Meta en modo Activo pide https): una página tuya que reenvía a esta PC.</p>
       <div class="prep-llaves">${P.extra.map(campo).join("")}</div>
@@ -1125,6 +1212,38 @@ function registro(){
   <div class="caja"><div class="log">${l.map(x=>{const m=x.match(/^(\S+ \S+)\s+(.*)$/s);const t=(m?m[2]:x).replace(/ filas en \[(.*)\]$/,(_,a)=>a?` filas (${a.replace(/'/g,"")})`:" filas");const c=/ERROR/.test(t)?"e":/SIMULACIÓN/.test(t)?"s":/^Publicado|Conectado/.test(t)?"p":"";
     return`<div class="${c}">${m?`<time>${esc(m[1])}</time>`:""}${esc(t)}</div>`}).join("")||'<span class="suave">Sin registros.</span>'}</div></div>`;
 }
+
+
+/* ---------- Procesos (☰ arriba): lo que está haciendo el Publicador y todo lo que hizo (registro.log) ---------- */
+let pestanaProc="recientes",historialProc=null,buscaProc="";
+function lineasRegistro(l){   /* «2026-10-25 09:57:23  texto» → {t, fecha, hora, texto}; las líneas sin fecha (detalle de un error) van con la anterior */
+  const out=[];for(const x of l){const m=x.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}):\d{2}\s+(.*)$/s);
+    if(m)out.push({fecha:m[1],hora:m[2],texto:m[3]});else if(out.length)out[out.length-1].detalle=(out[out.length-1].detalle||"")+x+"\n"}
+  return out.reverse()}
+function claseProc(t){return/^ERROR|ERROR /.test(t)?"err":/^(Atrasado|Revisar|Drive: no pude|Ya hay un Publicador)|sin aprobar/.test(t)?"warn":/^(Publicado|\[SIMULACIÓN\]|Conectado|Importadas|Desde producción|Sugerencias aceptadas|Aprobadas|Métricas)/.test(t)?"ok":""}
+function diaProc(f){const hoy=fechaLocal(new Date()),ay=fechaLocal(new Date(Date.now()-864e5));
+  return f==hoy?"Hoy":f==ay?"Ayer":cap(new Date(f+"T12:00").toLocaleDateString("es-PE",{weekday:"long",day:"numeric",month:"short"}))}
+function pintarProcesos(){
+  document.querySelectorAll("[data-pf]").forEach(b=>b.setAttribute("aria-selected",b.dataset.pf==pestanaProc));
+  const subiendo=E?E.cola.publicaciones.flatMap(p=>Object.entries(p.redes).filter(([,r])=>r.estado=="publicando").map(([k])=>({p,k}))):[];
+  $("#procActual").innerHTML=subiendo.map(({p,k})=>`<div class="pn-vivo"><b><span class="rueda" aria-hidden="true"></span>${E.config.simular?"Simulando":"Subiendo"} a ${REDES[k]?.[1]||k}</b><span class="msg">${esc(p.codigo)}</span></div>`).join("");
+  let l=lineasRegistro(pestanaProc=="todo"&&historialProc?historialProc:(E?.registro||[]));
+  if(pestanaProc=="errores")l=l.filter(x=>claseProc(x.texto)=="err");
+  if(buscaProc)l=l.filter(x=>(x.texto+(x.detalle||"")).toLowerCase().includes(buscaProc));
+  $("#procResumen").textContent=subiendo.length?`${subiendo.length} subiendo ahora`:l.length?"Nada subiendo ahora":"";
+  let dia="";
+  $("#procHistorial").innerHTML=l.map(x=>{const c=claseProc(x.texto),d=diaProc(x.fecha),cab=d!=dia?`<div class="pn-dia">${esc(d)}</div>`:"";dia=d;
+    return cab+`<div class="notif ${c}"><span class="ni" aria-hidden="true">${{ok:"✓",err:"!",warn:"■"}[c]||"i"}</span>
+      <span class="nt">${esc(x.texto.replace(/^ERROR\s*/,"Error · ").replace(/^\[SIMULACIÓN\]\s*/,"Simulado · "))}<small>${esc(x.hora)}</small>${x.detalle?`<details><summary class="suave">Ver el detalle</summary><pre class="log-det">${esc(x.detalle.slice(-1500))}</pre></details>`:""}</span><span></span></div>`}).join("")
+    ||`<div class="pn-vacio"><span>☰</span>${pestanaProc=="errores"?"Ningún error. Todo bien.":"No hay procesos todavía."}<br><small>Aquí ves lo que hace el Publicador: lo que sube, lo que baja de Drive, lo que falla y a qué hora.</small></div>`;
+  $("#puntoProceso").hidden=!subiendo.length;
+}
+function abrirProcesos(){const d=$("#dlgProcesos");if(d.open)return d.close();
+  document.documentElement.style.setProperty("--alto-header",$("header.top").offsetHeight+"px");   /* el panel sale justo bajo la cabecera */pestanaProc="recientes";historialProc=null;buscaProc="";$("#procBusca").value="";d.showModal();pintarProcesos()}
+$("#dlgProcesos").addEventListener("click",async e=>{const d=$("#dlgProcesos"),r=d.getBoundingClientRect();
+  if(e.target===d&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom))return d.close();
+  const f=e.target.closest("[data-pf]");if(f){pestanaProc=f.dataset.pf;if(pestanaProc=="todo"&&!historialProc){try{historialProc=(await api("/api/registro?n=2000")).lineas}catch(er){historialProc=[]}}pintarProcesos()}});
+$("#procBusca").addEventListener("input",e=>{buscaProc=e.target.value.toLowerCase();pintarProcesos()});
 
 /* ---------- Actualizaciones ---------- */
 let infoAct=null;
