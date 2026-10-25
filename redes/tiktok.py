@@ -2,6 +2,10 @@
 
 Modo «borrador» (por defecto): el video llega a la bandeja de TikTok del celular y ahí le pones sonido y publicas.
 Funciona sin que TikTok audite la app. Modo «directo»: publica solo, pero sin auditoría queda en privado (SELF_ONLY).
+
+En modo directo se siguen las reglas de TikTok para apps que publican (las revisa en la auditoría): antes de publicar
+se pregunta a TikTok qué deja esa cuenta (info_creador), la persona elige en cada pieza quién puede verla (sin opción
+marcada de antemano), si permite comentarios, dúos y stitch, y si es contenido comercial (red["ajustes_tiktok"]).
 """
 import hashlib
 import os
@@ -23,7 +27,7 @@ def _cred():
 
 
 def redireccion():
-    return nucleo.credenciales().get("TIKTOK_REDIRECT_URI") or f"http://localhost:{nucleo.config()['puerto']}/oauth/tiktok"
+    return nucleo.credenciales().get("TIKTOK_REDIRECT_URI") or f"http://localhost:{nucleo.puerto()}/oauth/tiktok"
 
 
 _estados = {}  # state -> code_verifier
@@ -76,15 +80,17 @@ def cuentas():
 
 
 def _escribir_cuenta(c):
-    nucleo.guardar_token("tiktok_cuentas", {**cuentas(), c["open_id"]: c})
+    with nucleo._candado_tokens:   # leer y guardar juntos: si no, dos cuentas que se renuevan a la vez se pisan
+        nucleo.guardar_token("tiktok_cuentas", {**cuentas(), c["open_id"]: c})
 
 
 def quitar_cuenta(open_id):
-    cs = cuentas()
-    cs.pop(open_id, None)
-    nucleo.guardar_token("tiktok_cuentas", cs)
-    if nucleo.tokens().get("tiktok", {}).get("open_id") == open_id:
-        nucleo.guardar_token("tiktok", {})
+    with nucleo._candado_tokens:
+        cs = cuentas()
+        cs.pop(open_id, None)
+        nucleo.guardar_token("tiktok_cuentas", cs)
+        if nucleo.tokens().get("tiktok", {}).get("open_id") == open_id:
+            nucleo.guardar_token("tiktok", {})
     if nucleo.config().get("tiktok_cuenta") == open_id:
         nucleo.guardar_config({"tiktok_cuenta": next(iter(cs), None)})
 
@@ -114,11 +120,21 @@ def _guardar(r, anterior=None):
 def token(red=None):
     t = cuenta_de(red)
     if t["vence"] - time.time() < 300:
-        clave, secreto = _cred()
-        t = _guardar(pedir("POST", f"{API}/oauth/token/", datos={
-            "client_key": clave, "client_secret": secreto, "grant_type": "refresh_token",
-            "refresh_token": t["refresh_token"]}), t)
-        _escribir_cuenta(t)
+        # TikTok cambia el refresh_token en cada renovación: dos hilos renovando la misma cuenta la desconectarían
+        with nucleo._candado_tokens:
+            t = cuenta_de(red)   # quizá otro hilo ya la renovó mientras esperaba
+            if t["vence"] - time.time() < 300:
+                clave, secreto = _cred()
+                try:
+                    t = _guardar(pedir("POST", f"{API}/oauth/token/", datos={
+                        "client_key": clave, "client_secret": secreto, "grant_type": "refresh_token",
+                        "refresh_token": t["refresh_token"]}), t)
+                except ErrorRed as e:
+                    if "invalid_grant" in str(e) or "refresh_token" in str(e):
+                        raise ErrorRed(f"Se venció el permiso de la cuenta de TikTok «{t.get('nombre')}»: "
+                                       "reconéctala en Conexiones") from None
+                    raise
+                _escribir_cuenta(t)
     return t["access_token"]
 
 
@@ -134,6 +150,43 @@ def _trozos(tam):
     return trozo, tam // trozo
 
 
+# ---------- Modo directo: lo que pide TikTok antes de publicar ----------
+PRIVACIDADES = {"PUBLIC_TO_EVERYONE": "Todos", "MUTUAL_FOLLOW_FRIENDS": "Amigos", "FOLLOWER_OF_CREATOR": "Seguidores",
+                "SELF_ONLY": "Solo yo"}
+
+
+def info_creador(cuenta=None):
+    """Lo que TikTok deja hacer hoy a esa cuenta: nombre, privacidades posibles, si tiene apagados los comentarios,
+    dúos o stitch y cuántos segundos puede durar el video."""
+    d = _revisar(pedir("POST", f"{API}/post/publish/creator_info/query/", cabeceras=_cab({"cuenta": cuenta} if cuenta else None),
+                       json_={}))
+    return {"nombre": d.get("creator_nickname"), "usuario": d.get("creator_username"), "foto": d.get("creator_avatar_url"),
+            "privacidades": [{"id": p, "nombre": PRIVACIDADES.get(p, p)} for p in d.get("privacy_level_options") or []],
+            "sin_comentarios": bool(d.get("comment_disabled")), "sin_duo": bool(d.get("duet_disabled")),
+            "sin_stitch": bool(d.get("stitch_disabled")), "max_segundos": d.get("max_video_post_duration_sec")}
+
+
+def _post_info(red):
+    """post_info del modo directo con lo que la persona eligió en la pieza (TikTok no deja poner valores por defecto)."""
+    aj = red.get("ajustes_tiktok") or {}
+    creador = info_creador(red.get("cuenta"))
+    validas = [p["id"] for p in creador["privacidades"]]
+    if not aj.get("privacidad"):
+        raise ErrorRed("Falta elegir quién puede ver el video en TikTok (se elige en cada pieza)")
+    if aj["privacidad"] not in validas:
+        raise ErrorRed(f"Esa cuenta de TikTok no deja publicar con privacidad «{PRIVACIDADES.get(aj['privacidad'], aj['privacidad'])}»")
+    if aj.get("comercial") and not (aj.get("marca_propia") or aj.get("contenido_marca")):
+        raise ErrorRed("Marcaste contenido comercial: elige «Tu marca», «Contenido de marca» o las dos")
+    if aj.get("comercial") and aj.get("contenido_marca") and aj["privacidad"] == "SELF_ONLY":
+        raise ErrorRed("El contenido de marca no puede ser privado («Solo yo»)")
+    return {"title": red["copy"][:2200], "privacy_level": aj["privacidad"],
+            "disable_comment": creador["sin_comentarios"] or not aj.get("comentarios"),
+            "disable_duet": creador["sin_duo"] or not aj.get("duo"),
+            "disable_stitch": creador["sin_stitch"] or not aj.get("stitch"),
+            "brand_organic_toggle": bool(aj.get("comercial") and aj.get("marca_propia")),
+            "brand_content_toggle": bool(aj.get("comercial") and aj.get("contenido_marca"))}
+
+
 def _revisar(r):
     err = r.get("error", {})
     if err.get("code") not in (None, "ok"):
@@ -147,13 +200,15 @@ class TikTok:
     def estado(self):
         clave, secreto = _cred()
         cs = cuentas()
-        falta = [k for k, v in (("TIKTOK_CLIENT_KEY", clave), ("TIKTOK_CLIENT_SECRET", secreto)) if not v]
-        if not cs:
-            falta.append("conectar la cuenta")
+        conectable = bool(clave and secreto)
+        falta = [] if conectable else ["Faltan las llaves de TikTok: ponlas en Preparación"]
+        if not cs and conectable:
+            falta.append("Conectar la cuenta")
         defecto = nucleo.config().get("tiktok_cuenta")
         lista = [{"id": k, "nombre": c.get("nombre"), "defecto": k == defecto or (defecto not in cs and i == 0)}
                  for i, (k, c) in enumerate(cs.items())]
-        return {"listo": not falta, "falta": falta, "modo": nucleo.config()["tiktok_modo"], "cuentas": lista}
+        return {"listo": not falta, "falta": falta, "modo": nucleo.config()["tiktok_modo"], "cuentas": lista,
+                "conectable": conectable}
 
     def publicar(self, pub, red):
         if pub["tipo"] != "video":
@@ -167,9 +222,7 @@ class TikTok:
         red["cuenta"], red["cuenta_nombre"] = cuenta["open_id"], cuenta.get("nombre")
         if cfg["tiktok_modo"] == "directo":
             d = _revisar(pedir("POST", f"{API}/post/publish/video/init/", cabeceras=_cab(red), json_={
-                "post_info": {"title": red["copy"][:2200], "privacy_level": cfg["tiktok_privacidad"],
-                              "disable_comment": False, "disable_duet": False, "disable_stitch": False},
-                "source_info": fuente}))
+                "post_info": _post_info(red), "source_info": fuente}))
         else:
             d = _revisar(pedir("POST", f"{API}/post/publish/inbox/video/init/", cabeceras=_cab(red),
                                json_={"source_info": fuente}))
@@ -183,6 +236,8 @@ class TikTok:
         out = {"id_remoto": d["publish_id"], "url": None, "cuenta": red["cuenta"], "cuenta_nombre": red["cuenta_nombre"]}
         if cfg["tiktok_modo"] != "directo":
             out["nota"] = "En la bandeja de TikTok: entra al celular, ponle sonido y publica con este copy"
+        else:
+            out["nota"] = "TikTok está procesando el video: puede tardar unos minutos en aparecer en el perfil"
         return out
 
     def estado_publicacion(self, publish_id, red=None):

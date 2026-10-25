@@ -91,18 +91,22 @@ def _iso(t):
 # ---------- Cada red ----------
 
 def _instagram():
-    c = meta.cred()
-    if not (c["META_TOKEN_USUARIO_SISTEMA"] and c["META_IG_USER_ID"]):
-        return []
-    r = pedir("GET", f"{meta.base()}/{c['META_IG_USER_ID']}/media", {
+    out = []
+    for ig, cu in meta.cuentas_red("instagram").items():
+        out += _instagram_de(ig, meta.token_de("instagram", cu))
+    return out
+
+
+def _instagram_de(ig, tok):
+    r = pedir("GET", f"{meta.base()}/{ig}/media", {
         "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,"
                   "children{media_type,media_url,thumbnail_url},insights.metric(reach,saved,shares)",
-        "limit": 36, "access_token": meta.token()})
+        "limit": 36, "access_token": tok})
     if "error" in r and "insights" in str(r.get("error")):   # algunas cuentas no dan insights por publicación
-        r = pedir("GET", f"{meta.base()}/{c['META_IG_USER_ID']}/media", {
+        r = pedir("GET", f"{meta.base()}/{ig}/media", {
             "fields": "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,children{media_type,media_url,thumbnail_url}",
-            "limit": 36, "access_token": meta.token()})
-    yo = pedir("GET", f"{meta.base()}/{c['META_IG_USER_ID']}", {"fields": "username", "access_token": meta.token()})
+            "limit": 36, "access_token": tok})
+    yo = pedir("GET", f"{meta.base()}/{ig}", {"fields": "username", "access_token": tok})
     cuenta = "@" + (yo.get("username") or "instagram")
     out = []
     for m in r.get("data", []):
@@ -121,12 +125,16 @@ def _instagram():
 
 
 def _facebook():
-    c = meta.cred()
-    if not (c["META_TOKEN_USUARIO_SISTEMA"] and c["META_PAGE_ID"]):
-        return []
-    r = pedir("GET", f"{meta.base()}/{c['META_PAGE_ID']}/posts", {
+    out = []
+    for pid, cu in meta.cuentas_red("facebook").items():
+        out += _facebook_de(pid, cu["nombre"], meta.token_de("facebook", cu))
+    return out
+
+
+def _facebook_de(pid, nombre, tok):
+    r = pedir("GET", f"{meta.base()}/{pid}/posts", {
         "fields": "id,message,created_time,full_picture,permalink_url,attachments{media_type,subattachments.limit(10){media{image{src}}}}",
-        "limit": 24, "access_token": meta.token_pagina()})
+        "limit": 24, "access_token": tok})
     out = []
     for m in r.get("data", []):
         at = ((m.get("attachments") or {}).get("data") or [{}])[0]
@@ -136,7 +144,7 @@ def _facebook():
         if not img:
             continue
         vid = "video" in (at.get("media_type") or "")
-        out.append({"red": "facebook", "cuenta": "Página", "id": m["id"], "clase": "video" if vid else "post",
+        out.append({"red": "facebook", "cuenta": nombre, "id": m["id"], "clase": "video" if vid else "post",
                     "tipo": "Álbum" if len(sub) > 1 else "Video" if vid else "Foto", "img": img, "fotos": sub or [img],
                     "texto": m.get("message") or "", "link": m.get("permalink_url"), "fecha": m.get("created_time"),
                     "es_video": vid, "met": {}})

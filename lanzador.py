@@ -12,9 +12,11 @@ de ahí y no de datos/: así el estratega sigue encontrando las métricas donde 
 Al cerrar la ventana, si quedan piezas aprobadas por salir, pregunta si sigue publicando en segundo plano.
 Por dentro es un servidor solo de esta PC (127.0.0.1); nadie de afuera puede entrar.
 
-Si cambias este archivo o las librerías, sube LANZADOR_VERSION y el archivo LANZADOR_MINIMO.
+Si cambias este archivo o las librerías, sube LANZADOR_VERSION y el archivo LANZADOR_MINIMO (el mínimo solo si el
+código de app/ necesita lo nuevo del lanzador: si no, los .exe viejos siguen actualizándose solos).
+Puertos fijos de las tres apps: Sala de edición 8765, Publicador 8766 (TikTok y Google vuelven aquí), Sala de diseño 8767.
 """
-LANZADOR_VERSION = "1.1.0"
+LANZADOR_VERSION = "1.2.0"
 
 # Imports explícitos para que PyInstaller empaquete lo que usa el código de app/ (que no analiza).
 import ctypes, http.server, io, json, mimetypes, re, runpy, secrets, shutil, socket, socketserver  # noqa: E401,F401
@@ -59,6 +61,15 @@ def preparar_entorno():
 def en_uso():
     with socket.socket() as s:
         return s.connect_ex(("127.0.0.1", PUERTO)) == 0
+
+
+def es_el_publicador():
+    """¿Lo que responde en el puerto es el Publicador? (si es otro programa, no se abre su ventana)."""
+    try:
+        with urllib.request.urlopen(URL + "/api/pendientes", timeout=5) as r:
+            return "pendientes" in json.loads(r.read() or b"{}")
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def salida_a_log(datos):
@@ -164,6 +175,10 @@ def main():
     _, datos = preparar_entorno()
     salida_a_log(datos)
     if en_uso():  # ya estaba corriendo (quizá en segundo plano): solo otra ventana
+        if not es_el_publicador():
+            mensaje(f"Otro programa está usando el puerto {PUERTO} de esta PC, así que el Publicador no puede abrir.\n"
+                    "Cierra ese programa (o reinicia la PC) y vuelve a abrir el Publicador.")
+            return
         if not ventana_propia(datos, sys.stderr):
             abrir_ventana(datos)
         return
@@ -200,7 +215,10 @@ def main():
         listo()  # Edge no tiene «Abriendo…»: se espera a que el servidor responda
         abrir_ventana(datos)         # con Edge no se puede esperar: se apaga con el botón «Apagar» del programa
     hilo.join()
-    if estado["codigo"] not in (0, None):
+    if estado["codigo"] == 3:   # servidor.py: otra copia ya tiene publicador.lock de estos datos
+        mensaje(f"Ya hay otro Publicador abierto con los mismos datos ({datos}).\n"
+                "Ciérralo primero (o usa ese): dos abiertos subirían todo dos veces.")
+    elif estado["codigo"] not in (0, None):
         mensaje(f"El publicador se detuvo (código {estado['codigo']}). Mándale a Claude el archivo:\n"
                 f"{datos / 'publicador.log'}")
 

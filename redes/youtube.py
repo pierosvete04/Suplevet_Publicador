@@ -25,7 +25,7 @@ def _cliente():
 
 
 def redireccion():
-    return f"http://127.0.0.1:{nucleo.config()['puerto']}/oauth/google"
+    return f"http://127.0.0.1:{nucleo.puerto()}/oauth/google"
 
 
 def url_conectar():
@@ -72,17 +72,19 @@ def cuentas():
 
 
 def _escribir_cuenta(c):
-    cs = {k: v for k, v in cuentas().items() if k != "_anterior"}
-    nucleo.guardar_token("youtube_cuentas", {**cs, c["id"]: c})
-    nucleo.guardar_token("youtube", {})   # el formato viejo ya no hace falta
+    with nucleo._candado_tokens:   # leer y guardar juntos: si no, dos canales que se renuevan a la vez se pisan
+        cs = {k: v for k, v in cuentas().items() if k != "_anterior"}
+        nucleo.guardar_token("youtube_cuentas", {**cs, c["id"]: c})
+        nucleo.guardar_token("youtube", {})   # el formato viejo ya no hace falta
 
 
 def quitar_cuenta(cid):
-    cs = cuentas()
-    cs.pop(cid, None)
-    nucleo.guardar_token("youtube_cuentas", {k: v for k, v in cs.items() if k != "_anterior"})
-    if cid == "_anterior":
-        nucleo.guardar_token("youtube", {})
+    with nucleo._candado_tokens:
+        cs = cuentas()
+        cs.pop(cid, None)
+        nucleo.guardar_token("youtube_cuentas", {k: v for k, v in cs.items() if k != "_anterior"})
+        if cid == "_anterior":
+            nucleo.guardar_token("youtube", {})
     if nucleo.config().get("youtube_cuenta") == cid:
         nucleo.guardar_config({"youtube_cuenta": next(iter(cs), None)})
 
@@ -103,15 +105,24 @@ def cuenta_de(red=None):
 def token(red=None):
     t = cuenta_de(red)
     if t["vence"] - time.time() < 300:
-        c = _cliente()
-        r = pedir("POST", "https://oauth2.googleapis.com/token", datos={
-            "client_id": c["client_id"], "client_secret": c["client_secret"],
-            "refresh_token": t["refresh_token"], "grant_type": "refresh_token"})
-        t = {**t, "access_token": r["access_token"], "vence": int(time.time()) + int(r.get("expires_in", 0))}
-        if t["id"] == "_anterior":
-            nucleo.guardar_token("youtube", {k: v for k, v in t.items() if k not in ("id", "nombre")})
-        else:
-            _escribir_cuenta(t)
+        with nucleo._candado_tokens:
+            t = cuenta_de(red)   # quizá otro hilo ya lo renovó mientras esperaba
+            if t["vence"] - time.time() < 300:
+                c = _cliente()
+                try:
+                    r = pedir("POST", "https://oauth2.googleapis.com/token", datos={
+                        "client_id": c["client_id"], "client_secret": c["client_secret"],
+                        "refresh_token": t["refresh_token"], "grant_type": "refresh_token"})
+                except ErrorRed as e:
+                    if "invalid_grant" in str(e):   # en modo Prueba de Google el permiso vence a los 7 días
+                        raise ErrorRed(f"Se venció el permiso del canal de YouTube «{t.get('nombre')}»: "
+                                       "reconéctalo en Conexiones") from None
+                    raise
+                t = {**t, "access_token": r["access_token"], "vence": int(time.time()) + int(r.get("expires_in", 0))}
+                if t["id"] == "_anterior":
+                    nucleo.guardar_token("youtube", {k: v for k, v in t.items() if k not in ("id", "nombre")})
+                else:
+                    _escribir_cuenta(t)
     return t["access_token"]
 
 
@@ -124,15 +135,19 @@ class YouTube:
 
     def estado(self):
         falta = []
-        if not nucleo.GOOGLE_SECRET.exists():
-            falta.append("google_client_secret.json")
+        try:
+            conectable = bool(_cliente().get("client_id"))
+        except ErrorRed:
+            conectable = False
+        if not conectable:
+            falta.append("Faltan las llaves de YouTube: ponlas en Preparación")
         cs = cuentas()
-        if not cs:
-            falta.append("conectar la cuenta")
+        if not cs and conectable:
+            falta.append("Conectar el canal")
         defecto = nucleo.config().get("youtube_cuenta")
         lista = [{"id": k, "nombre": c.get("nombre"), "defecto": k == defecto or (defecto not in cs and i == 0)}
                  for i, (k, c) in enumerate(cs.items())]
-        return {"listo": not falta, "falta": falta, "cuentas": lista}
+        return {"listo": not falta, "falta": falta, "cuentas": lista, "conectable": conectable}
 
     def publicar(self, pub, red):
         if pub["tipo"] != "video":

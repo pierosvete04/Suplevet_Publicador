@@ -1,3 +1,16 @@
+## 1.7.0 · Lee Drive como las salas, y más seguro al publicar
+
+- **Listos lee Drive directo**, con la misma cuenta de Google de las salas: los videos de la Sala de edición (V.FINALES, también dentro de cada día o sesión) y, por primera vez, los **posts y carruseles de la Sala de diseño** (DISEÑO/…/FINAL).
+- Arriba eliges la **semana** (abre sola en la de hoy) y el **proyecto**. Los videos se bajan recién al verlos o al publicarlos; si ya están en la PC, usa esos.
+- El brief de la semana y los guiones salen de Drive: ahora sí revisa las palabras que el brief pide evitar.
+- **Nunca sube dos veces lo mismo**: lo que ya salió o se está subiendo no se vuelve a subir, ni con «Publicar ahora».
+- Si se cierra el programa a mitad de una subida, esa pieza queda en **Revisar** (no se sube sola otra vez). Si la PC estuvo apagada, lo que tiene más de 90 minutos de atraso queda **Atrasado** y no sale todo de golpe.
+- No se pueden abrir **dos Publicadores** con los mismos datos, y la cola o las llaves nunca se borran si un archivo no se puede leer.
+- Las llaves de TikTok y YouTube ya no se pisan entre cuentas; si un permiso vence, dice «reconecta la cuenta».
+- **Conectar con Facebook**: varias páginas y sus cuentas de Instagram. Instagram acepta posts de una sola imagen.
+- Nueva pestaña **Preparación**: cada uno pega las llaves de sus apps de Meta, TikTok y Google, con los pasos de cada red. TikTok directo con la pantalla que pide su revisión.
+- **Cabecera y menú de la cuenta iguales a las salas**; Configuración se abre desde la cuenta. Muchos arreglos en Hoy, Listos, Cola, Pauta, Publicadas y Conexiones.
+
 ## 1.6.0 · Entrar y elegir la carpeta, actualizar más seguro
 
 - **Entrar y elegir la carpeta, paso a paso** (igual en las tres apps): entras con Google sin pegar ningún link, eliges la carpeta del equipo (una tuya, una compartida contigo, una nueva o con su link) y te dice cómo invitar al equipo como Editor. En **Configuración → Cuenta** está la carpeta, con «Cambiar de carpeta…».

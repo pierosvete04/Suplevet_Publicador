@@ -57,11 +57,12 @@ def _indice():
     for base in (PRODUCCION / "editor" / "drive", PRODUCCION / "editor" / "datos" / "drive"):
         rutas += glob.glob(str(base / "*" / "Guion" / "produccion.json"))
     rutas += glob.glob(str(PRODUCCION / "semanas" / "*" / "produccion.json"))
-    indice = {}
+    import salas
+    indice = {_clave(nombre): str(r) for nombre, r in salas.guiones().items()}   # los de Drive, lo mismo que la Sala
     for r in rutas:
         indice.setdefault(_clave(Path(r).parent.parent.name if Path(r).parent.name == "Guion" else Path(r).parent.name), r)
     # sesiones agrupadas en la Sala (11/10 + 13/10): todas usan el guion de la sesión que lo tiene
-    grupos = nucleo.leer_json(PRODUCCION / "editor" / "grupos.json", {})
+    grupos = salas.grupos() or nucleo.leer_json(PRODUCCION / "editor" / "grupos.json", {})
     for g in grupos.values():
         guion = indice.get(_clave(g.get("guion")))
         for s in g.get("sesiones") or []:
@@ -118,6 +119,8 @@ _modelo = None
 def transcripcion(video, hacer=True):
     """Texto hablado del video, guardado en 2_PUBLICACION/transcripciones. None si no se puede transcribir.
     hacer=False: solo la que ya está guardada (para mostrar rápido)."""
+    if not Path(video).is_file():   # sigue en Drive: se baja recién al publicar
+        return None
     st = Path(video).stat()
     cache = TRANSCRIPCIONES / (hashlib.md5(f"{video}|{st.st_size}|{int(st.st_mtime)}".encode()).hexdigest() + ".txt")
     if cache.exists():
@@ -141,6 +144,7 @@ def transcripcion(video, hacer=True):
                                  initial_prompt="Suplevet, WhatsApp, calostro, omega 3, veterinario, tu perro, tu mascota")
     texto = " ".join(s.text.strip() for s in segs).strip()
     texto = re.sub(r"\bsu ?ple ?[bv]et\b", "Suplevet", texto, flags=re.I)
+    texto = re.sub(r"\bsu\s+suplevet\b", "Suplevet", texto, flags=re.I)
     TRANSCRIPCIONES.mkdir(parents=True, exist_ok=True)
     cache.write_text(texto, encoding="utf-8")
     return texto
@@ -197,6 +201,8 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
         texto = transcripcion(pieza["archivos"][0], transcribir) if pieza.get("tipo") == "video" else None
         if not texto:
             return {}
+        # el audio suele salir «¿Por qué su Suplevet es…?»: el «su» sobra
+        texto = re.sub(r"\bsu\s+suplevet\b", "Suplevet", texto, flags=re.I)
         fr = _frases(texto)
         # lo hablado es largo: el hook es la primera idea, cortada en la primera coma después de unas palabras
         primera = _sin_saludo(fr[0]) if fr else ""
@@ -211,7 +217,7 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
     em = emojis[v % len(emojis)]
     if not gancho:
         gancho = _beneficio(partes[0])
-    gancho = gancho.strip()
+    gancho = re.sub(r"\bsu\s+suplevet\b", "Suplevet", gancho.strip(), flags=re.I)
     if nivel == "TOFU" and "suplevet" in gancho.lower():      # TOFU: la marca no va en la primera línea
         gancho = re.sub(r"\s*suplevet\s*", " ", gancho, flags=re.I).strip()
     primera = f"{em} {gancho}"

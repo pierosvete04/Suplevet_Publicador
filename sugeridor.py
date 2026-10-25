@@ -9,6 +9,7 @@ Cada cuenta es un destino (Instagram, Facebook, cada cuenta de TikTok y cada can
 Si no alcanzan los videos, no repite: dice cuántos faltan.
 """
 import os
+import threading
 import re
 from datetime import datetime, timedelta
 
@@ -68,7 +69,7 @@ def destinos():
 def _defectos(dests):
     """La cuenta que usa una pieza sin cuenta elegida: la de por defecto (o la primera)."""
     cfg, out = nucleo.config(), {}
-    for red in ("tiktok", "youtube"):
+    for red in nucleo.REDES_VIDEO:
         ids = [d["cuenta"] for d in dests if d["red"] == red and d["cuenta"]]
         out[red] = cfg.get(f"{red}_cuenta") if cfg.get(f"{red}_cuenta") in ids else (ids[0] if ids else None)
     return out
@@ -84,16 +85,28 @@ def _clave(red, r, defectos):
 # ---------- Lo que ya salió o ya está en la cola ----------
 
 def _manuales():
+    """Videos marcados como subidos a mano en todas las cuentas (lo viejo, sin cuenta)."""
     return set(nucleo.leer_json(ARCHIVO, {}).get("ya_salieron") or [])
 
 
-def ya_salio(ruta, si=True):
-    """Marca un video como subido por fuera del publicador: no se vuelve a sugerir."""
+def _manuales_por_cuenta():
+    """{clave de la cuenta: {rutas}} de los videos marcados como subidos a mano solo en esa cuenta."""
+    return {k: set(v or []) for k, v in (nucleo.leer_json(ARCHIVO, {}).get("por_cuenta") or {}).items()}
+
+
+def ya_salio(ruta, si=True, clave=None):
+    """Marca un video como subido por fuera del publicador: no se vuelve a sugerir en esa cuenta (o en ninguna, sin cuenta)."""
     with nucleo._candado:
         d = nucleo.leer_json(ARCHIVO, {})
-        ya = set(d.get("ya_salieron") or [])
-        (ya.add if si else ya.discard)(_norm(ruta))
-        d["ya_salieron"] = sorted(ya)
+        if clave:
+            pc = d.setdefault("por_cuenta", {})
+            ya = set(pc.get(clave) or [])
+            (ya.add if si else ya.discard)(_norm(ruta))
+            pc[clave] = sorted(ya)
+        else:
+            ya = set(d.get("ya_salieron") or [])
+            (ya.add if si else ya.discard)(_norm(ruta))
+            d["ya_salieron"] = sorted(ya)
         nucleo.escribir_json(ARCHIVO, d)
     return {"ok": True}
 
@@ -125,12 +138,51 @@ def _carruseles_usados(dests):
 
 # ---------- Horarios ----------
 
+def _minutos(hhmm):
+    """«08:30» → 510. Si no es una hora, ValueError."""
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})", str(hhmm or "").strip())
+    if not m or int(m.group(1)) > 23 or int(m.group(2)) > 59:
+        raise ValueError
+    return int(m.group(1)) * 60 + int(m.group(2))
+
+
+def validar_ajustes(a):
+    """Revisa los ajustes de Hoy antes de guardarlos. Devuelve los ajustes limpios o ValueError en palabras simples."""
+    a = dict(a or {})
+    for k, nombre in (("desde", "Primer video"), ("hasta", "Último video")):
+        if k in a:
+            try:
+                m = _minutos(a[k])
+            except ValueError:
+                raise ValueError(f"Falta la hora de «{nombre}» (o no es una hora válida)") from None
+            a[k] = f"{m // 60:02d}:{m % 60:02d}"
+    actual = ajustes()
+    if _minutos(a.get("desde", actual["desde"])) >= _minutos(a.get("hasta", actual["hasta"])):
+        raise ValueError("«Primer video» tiene que ser más temprano que «Último video»")
+    for k, nombre, lo, hi in (("por_dia", "Videos por cuenta al día", 1, 30), ("aire_cuerpo", "Días antes de repetir un cuerpo", 0, 30)):
+        if k in a:
+            try:
+                a[k] = int(a[k])
+            except (TypeError, ValueError):
+                raise ValueError(f"«{nombre}» tiene que ser un número") from None
+            if not lo <= a[k] <= hi:
+                raise ValueError(f"«{nombre}» va de {lo} a {hi}")
+    return a
+
+
 def horas(n):
     """n horarios repartidos parejo entre «desde» y «hasta» (de 5 en 5 minutos)."""
     a = ajustes()
-    h0, h1 = [int(x[:2]) * 60 + int(x[3:5]) for x in (a["desde"], a["hasta"])]
+    try:
+        h0, h1 = _minutos(a["desde"]), _minutos(a["hasta"])
+    except (KeyError, ValueError):
+        h0, h1 = 8 * 60, 22 * 60          # ajustes rotos: el horario de siempre
+    if h1 <= h0:                          # al revés: se usan dándoles la vuelta
+        h0, h1 = h1, h0
+    if h1 == h0:
+        h1 = min(h0 + 60, 23 * 60 + 55)
     if n <= 1:
-        return [a["desde"]]
+        return [f"{h0 // 60:02d}:{h0 % 60:02d}"]
     paso = (h1 - h0) / (n - 1)
     return [f"{m // 60:02d}:{m % 60:02d}" for m in (int(round((h0 + i * paso) / 5) * 5) for i in range(n))]
 
@@ -164,13 +216,21 @@ def planear(desde=None, dias=1, excluir=()):
     por_dia, aire = max(1, int(a["por_dia"])), max(0, int(a["aire_cuerpo"]))
     hoy = datetime.now().strftime("%Y-%m-%d")
     dia0 = desde or hoy
+    try:
+        datetime.strptime(dia0, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("La fecha «Desde» no es válida") from None
+    if dia0 < hoy:
+        raise ValueError("«Desde» no puede ser un día que ya pasó: elige hoy o un día que viene")
     todos = destinos()
     dests = [d for d in todos if d["activo"]]
     inv, carrs = _inventario()
     excluir = {_norm(e) for e in excluir}
     manuales = _manuales()
+    por_cuenta = _manuales_por_cuenta()
+    a_mano = manuales.union(*por_cuenta.values())        # subidos a mano en alguna cuenta
     usos = _usos(inv, todos)
-    salidos = {u["ruta"] for u in usos} | manuales
+    salidos = {u["ruta"] for u in usos} | a_mano
     usos_carr = _carruseles_usados(todos)
     nombres = {d["clave"]: d["nombre"] for d in todos}
     orden = [d["clave"] for d in todos]      # la variante del copy de cada cuenta (la misma que usa aceptar)
@@ -179,7 +239,7 @@ def planear(desde=None, dias=1, excluir=()):
     for n in range(max(1, min(int(dias), 14))):
         dia = (datetime.strptime(dia0, "%Y-%m-%d") + timedelta(days=n)).strftime("%Y-%m-%d")
         ahora = datetime.now().strftime("%H:%M") if dia == hoy else "00:00"
-        en_algun_lado = {u["ruta"] for u in usos} | manuales
+        en_algun_lado = {u["ruta"] for u in usos} | a_mano
         veces = {}
         for u in usos:
             veces[u["ruta"]] = veces.get(u["ruta"], 0) + 1
@@ -200,11 +260,39 @@ def planear(desde=None, dias=1, excluir=()):
             plan[d["clave"]] = {**d, "ya": [{"fecha": u["fecha"], "codigo": inv.get(u["ruta"], {}).get("codigo") or os.path.basename(u["ruta"])}
                                             for u in sorted(del_dia, key=lambda u: u["fecha"])],
                                 "piezas": [], "faltan": 0,
-                                "_usadas": {u["ruta"] for u in mios} | manuales | excluir,
+                                "_usadas": {u["ruta"] for u in mios} | manuales | por_cuenta.get(d["clave"], set()) | excluir,
                                 "_cuerpos": {u["cuerpo"] for u in del_dia}, "_ultimo": ultimo,
                                 "_horas": [h for h in hs if h not in ocupadas and h > ahora],
                                 "_cupo": max(0, por_dia - len(del_dia))}
-            plan[d["clave"]]["_cupo"] = min(plan[d["clave"]]["_cupo"], len(plan[d["clave"]]["_horas"]))
+            pl = plan[d["clave"]]
+            # hoy ya pasaron algunas horas: el cupo de hoy es lo que cabe en los horarios que quedan
+            pl["por_hora"] = len(pl["_horas"]) < pl["_cupo"]
+            pl["_cupo"] = min(pl["_cupo"], len(pl["_horas"]))
+            pl["cupo"] = len(del_dia) + pl["_cupo"]          # videos que puede tener esta cuenta ese día
+            pl["horas_libres"] = len(pl["_horas"])
+        def armar(v, d, pl, dia=dia, en_algun_lado=en_algun_lado):
+            """La fila que se muestra de un video para una cuenta: código, por qué se sugiere y la primera línea del copy."""
+            r = _norm(v["archivos"][0])
+            hace = _dias_entre(dia, pl["_ultimo"][v["cuerpo"]]) if v["cuerpo"] in pl["_ultimo"] else None
+            en_cola = sorted({nombres[u["clave"]] for u in usos if u["ruta"] == r and not u.get("plan")})
+            en_plan = sorted({nombres[u["clave"]] for u in usos if u["ruta"] == r and u.get("plan")} - set(en_cola))
+            if r not in en_algun_lado:
+                motivo = "Nuevo: no salió en ninguna cuenta"
+            elif r in a_mano and not en_cola and not en_plan:
+                motivo = "Marcado como ya subido a mano en otra cuenta; acá todavía no"
+            else:
+                motivo = "; ".join(x for x in ((f"Ya está en {', '.join(en_cola)}" if en_cola else ""),
+                                                (f"También va en {', '.join(en_plan)}" if en_plan else ""),
+                                                ("subido a mano en otra cuenta" if r in a_mano else "")) if x) + "; acá todavía no"
+            if hace is not None and hace <= aire:
+                motivo += f" · ojo: este cuerpo salió acá hace {hace} día{'s' if hace != 1 else ''}"
+            return {"hora": "", "fecha": "", "ruta": v["ruta"], "codigo": v["codigo"],
+                    "cuerpo": v["cuerpo"], "hook": v["hook"], "produccion": v["produccion"],
+                    "portada": v["portada"], "archivos": v["archivos"], "motivo": motivo,
+                    "pronto": hace is not None and hace <= aire,
+                    "gancho": (copys.generar(v, orden.index(d["clave"]) + int(dia[8:10]), transcribir=False)
+                               .get("instagram") or "").split("\n")[0]}
+
         # por rondas: una pieza por cuenta en cada vuelta, así ninguna se lleva todo lo nuevo
         for _ in range(por_dia):
             for d in dests:
@@ -225,25 +313,8 @@ def planear(desde=None, dias=1, excluir=()):
                             veces.get(r, 0), -hace, _reciente(v))                 # lo más nuevo primero
                 v = min(cands, key=puntaje)
                 r = _norm(v["archivos"][0])
-                hace = _dias_entre(dia, pl["_ultimo"][v["cuerpo"]]) if v["cuerpo"] in pl["_ultimo"] else None
-                en_cola = sorted({nombres[u["clave"]] for u in usos if u["ruta"] == r and not u.get("plan")})
-                en_plan = sorted({nombres[u["clave"]] for u in usos if u["ruta"] == r and u.get("plan")} - set(en_cola))
-                if r not in en_algun_lado:
-                    motivo = "Nuevo: no salió en ninguna cuenta"
-                elif r in manuales:
-                    motivo = "Marcado como ya subido a mano"
-                else:
-                    motivo = "; ".join(x for x in ((f"Ya está en {', '.join(en_cola)}" if en_cola else ""),
-                                                    (f"También va en {', '.join(en_plan)}" if en_plan else "")) if x)                         + "; acá todavía no"
-                if hace is not None and hace <= aire:
-                    motivo += f" · ojo: este cuerpo salió acá hace {hace} día{'s' if hace != 1 else ''}"
-                pieza = {"hora": "", "fecha": "", "ruta": v["ruta"], "codigo": v["codigo"],
-                         "cuerpo": v["cuerpo"], "hook": v["hook"], "produccion": v["produccion"],
-                         "portada": v["portada"], "archivos": v["archivos"], "motivo": motivo,
-                         "pronto": hace is not None and hace <= aire,
-                         "gancho": (copys.generar(v, orden.index(d["clave"]) + int(dia[8:10]), transcribir=False)
-                                    .get("instagram") or "").split("\n")[0],
-                         "_uso": {"clave": d["clave"], "ruta": r, "cuerpo": v["cuerpo"], "fecha": f"{dia}T00:00", "plan": True}}
+                pieza = armar(v, d, pl)
+                pieza["_uso"] = {"clave": d["clave"], "ruta": r, "cuerpo": v["cuerpo"], "fecha": f"{dia}T00:00", "plan": True}
                 pl["piezas"].append(pieza)
                 pl["_usadas"].add(r)
                 pl["_cuerpos"].add(v["cuerpo"])
@@ -282,6 +353,13 @@ def planear(desde=None, dias=1, excluir=()):
         for d in dests:
             pl = plan[d["clave"]]
             pl["faltan"] = max(0, pl["_cupo"] - len(pl["piezas"]))
+            sin_usar = [v for r, v in inv.items() if r not in pl["_usadas"]]
+            # por qué faltan: no quedan videos sin subir a esta cuenta, o los que quedan son de cuerpos que ya van ese día
+            pl["por_que_faltan"] = ("" if not pl["faltan"] else "cuerpos" if sin_usar else "videos")
+            # otros videos que pueden ir en esta cuenta ese día, para «Cambiar por otro» sin tocar las demás cuentas
+            libres = sorted((v for v in sin_usar if v["cuerpo"] not in pl["_cuerpos"]),
+                            key=lambda v: (_norm(v["archivos"][0]) in en_algun_lado, _reciente(v)))
+            pl["reserva"] = [armar(v, d, pl) for v in libres[:6]]
             lista.append({k: v for k, v in pl.items() if not k.startswith("_")})
         salida.append({"dia": dia, "destinos": lista, "sugeridos": sum(len(x["piezas"]) for x in lista),
                        "faltan": sum(x["faltan"] for x in lista)})
@@ -290,12 +368,17 @@ def planear(desde=None, dias=1, excluir=()):
     if len(cuerpos) < por_dia:
         avisos.append(f"Tienes {len(cuerpos)} cuerpos distintos listos. Para {por_dia} videos diarios por cuenta sin repetir "
                       f"cuerpo en el día hacen falta al menos {por_dia}: pide {por_dia - len(cuerpos)} cuerpos más a producción.")
-    if any(x["faltan"] for x in salida[0]["destinos"]):
-        avisos.append("Algunas cuentas no llegan a su cupo: ya usaron todos los videos que hay de esos cuerpos.")
+    razones = {x["por_que_faltan"] for x in salida[0]["destinos"] if x["faltan"]}
+    if "videos" in razones:
+        avisos.append("Algunas cuentas no llegan a su cupo: ya tienen (o se marcaron como subidos) todos los videos listos.")
+    if "cuerpos" in razones:
+        avisos.append("Algunas cuentas no llegan a su cupo: los videos que les quedan son de cuerpos que ya van ese día en esa cuenta.")
+    if any(x.get("por_hora") for x in salida[0]["destinos"]) and salida[0]["dia"] == hoy:
+        avisos.append("Hoy ya pasaron algunos horarios: cada cuenta recibe solo los videos que caben en las horas que quedan.")
     return {"dias": salida, "por_dia": por_dia, "horas": hs, "destinos": todos, "ajustes": a,
             "inventario": {"videos": len(inv), "cuerpos": len(cuerpos), "carruseles": len(carrs),
                            "sin_salir": sum(1 for r in inv if r not in salidos),
-                           "ya_salieron_a_mano": len(manuales)},
+                           "ya_salieron_a_mano": len(a_mano)},
             "avisos": avisos}
 
 
@@ -314,7 +397,8 @@ def aceptar(items, aprobar=False):
         p = por_ruta.get(_norm(it.get("ruta")))
         if p and it.get("clave") in dests and p["tipo"] == "video":
             v = orden.index(it["clave"]) + int((it.get("fecha") or "0000-00-00")[8:10])
-            copies[(it["clave"], _norm(it["ruta"]))] = copys.generar(p, v)
+            nivel = p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), produccion.cuerpo_de(p)).get("nivel")
+            copies[(it["clave"], _norm(it["ruta"]))] = copys.generar(p, v, nivel=nivel)
     nuevas, trabadas, saltadas = [], [], 0
     with nucleo._candado:
         c = nucleo.cola()
@@ -329,11 +413,8 @@ def aceptar(items, aprobar=False):
                 saltadas += 1
                 continue
             ya.add((d["clave"], llave))
-            pub = nucleo.nueva_publicacion({"codigo": p["codigo"], "tipo": p["tipo"], "copy_borrador": p["copy"]}, nucleo.AQUI)
-            pub.update(archivos=p["archivos"], portada=p["portada"], produccion=p["produccion"], fecha=it["fecha"],
-                       sugerido=True, **({"cuerpo": p["cuerpo"]} if p.get("cuerpo") else {}))
-            pub.pop("dia", None)
-            pub.pop("_desde", None)
+            pub = produccion.nueva_desde_listo(p)   # con su semana (brief) y de dónde se baja en Drive
+            pub.update(fecha=it["fecha"], sugerido=True, **({"cuerpo": p["cuerpo"]} if p.get("cuerpo") else {}))
             if copies.get((d["clave"], _norm(it["ruta"]))):
                 copys.aplicar(pub, copies[(d["clave"], _norm(it["ruta"]))])
             for red, r in pub["redes"].items():
@@ -348,6 +429,9 @@ def aceptar(items, aprobar=False):
             nuevas.append(pub)
         nucleo.guardar_cola(c)
     produccion._memo["datos"] = None
+    for pub in nuevas:   # los videos de Drive se van bajando ya, para que estén listos a su hora
+        if pub.get("drive"):
+            threading.Thread(target=produccion.bajar_en_fondo, args=(pub,), daemon=True).start()
     nucleo.anotar(f"Sugerencias aceptadas: {len(nuevas)} piezas a la cola" + (f" · {saltadas} ya estaban" if saltadas else "")
                   + (f" · sin aprobar por palabras prohibidas: {trabadas}" if trabadas else ""))
     return {"nuevas": len(nuevas), "saltadas": saltadas, "trabadas": trabadas}

@@ -36,19 +36,51 @@ def buscar(p, cid):
     return c
 
 
+def _numero(v, nombre, entero=False):
+    try:
+        return int(v) if entero else float(v)
+    except (TypeError, ValueError):
+        raise ErrorRed(f"«{nombre}» tiene que ser un número") from None
+
+
+def _fecha(v, nombre):
+    try:
+        return datetime.strptime(v, "%Y-%m-%dT%H:%M").strftime("%Y-%m-%dT%H:%M")
+    except (TypeError, ValueError):
+        raise ErrorRed(f"«{nombre}» no es una fecha y hora válida") from None
+
+
 def nueva(datos):
     cfg = nucleo.config()["pauta"]
+    pres = datos.get("presupuesto_diario")
+    pres = 20.0 if pres in (None, "") else _numero(pres, "Presupuesto por día")
+    if pres < 1:
+        raise ErrorRed("El presupuesto por día tiene que ser mayor que cero (Meta pide al menos unos soles al día)")
+    emin = _numero(datos["edad_min"], "Edad desde", True) if datos.get("edad_min") not in (None, "") else int(cfg["edad_min"])
+    emax = _numero(datos["edad_max"], "Edad hasta", True) if datos.get("edad_max") not in (None, "") else int(cfg["edad_max"])
+    if not 18 <= emin <= 65 or not 18 <= emax <= 65:
+        raise ErrorRed("Las edades van de 18 a 65")
+    if emin > emax:
+        raise ErrorRed("«Edad desde» no puede ser mayor que «hasta»")
+    inicio = _fecha(datos["inicio"], "Desde") if datos.get("inicio") else datetime.now().strftime("%Y-%m-%dT%H:%M")
+    fin = _fecha(datos["fin"], "Hasta") if datos.get("fin") else None
+    if fin and fin <= inicio:
+        raise ErrorRed("«Hasta» tiene que ser después de «Desde»")
+    plataformas = datos.get("plataformas")
+    plataformas = ["instagram", "facebook"] if plataformas is None else [x for x in plataformas if x in ("instagram", "facebook")]
+    if not plataformas:
+        raise ErrorRed("Prende al menos Instagram o Facebook")
     c = {
         "id": uuid.uuid4().hex[:8],
         "nombre": datos.get("nombre") or f"Suplevet {datetime.now():%Y-%m-%d}",
         "objetivo": datos.get("objetivo", "reproducciones"),
-        "presupuesto_diario": float(datos.get("presupuesto_diario") or 20),
-        "inicio": datos.get("inicio") or datetime.now().strftime("%Y-%m-%dT%H:%M"),
-        "fin": datos.get("fin") or None,
+        "presupuesto_diario": pres,
+        "inicio": inicio,
+        "fin": fin,
         "paises": datos.get("paises") or cfg["pais"],
-        "edad_min": int(datos.get("edad_min") or cfg["edad_min"]),
-        "edad_max": int(datos.get("edad_max") or cfg["edad_max"]),
-        "plataformas": datos.get("plataformas") or ["instagram", "facebook"],
+        "edad_min": emin,
+        "edad_max": emax,
+        "plataformas": plataformas,
         "piezas": datos.get("piezas") or [],
         "estado": "borrador",
         "meta": {},

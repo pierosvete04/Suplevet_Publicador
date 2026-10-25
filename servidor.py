@@ -21,10 +21,11 @@ import copys  # noqa: E402
 import cuenta  # noqa: E402
 import nucleo  # noqa: E402
 import pauta  # noqa: E402
+import preparacion  # noqa: E402
 import produccion  # noqa: E402
 import redes  # noqa: E402
 import sugeridor  # noqa: E402
-from redes import publicadas, tiktok, youtube  # noqa: E402
+from redes import meta, publicadas, tiktok, youtube  # noqa: E402
 
 APP = Path(__file__).resolve().parent / "app.html"
 
@@ -52,6 +53,17 @@ def estado():
             "registro": nucleo.registro(80), "metricas": nucleo.metricas_guardadas()}
 
 
+def pagina(titulo, texto, extra=""):
+    """Página suelta (vuelta de conectar una red o un error) con un botón para volver a la app."""
+    import html
+    return ("<!doctype html><html lang='es'><head><meta charset='utf-8'><title>Publicador</title>"
+            "<style>body{font:15px/1.5 'Segoe UI',system-ui,sans-serif;background:#04060b;color:#edf3ff;display:grid;place-items:center;"
+            "min-height:100vh;margin:0;padding:16px;box-sizing:border-box}div{max-width:520px}p{color:#8494b4;white-space:pre-line}"
+            "a{display:inline-block;margin-top:12px;padding:9px 16px;border-radius:8px;background:#2b6fe6;color:#fff;text-decoration:none;font-weight:600}</style>"
+            f"</head><body><div><h2>{html.escape(titulo)}</h2><p>{html.escape(str(texto))}</p>"
+            f"<a href='/'>Volver al Publicador</a></div>{extra}</body></html>")
+
+
 def archivos_permitidos():
     out = set()
     for p in nucleo.cola()["publicaciones"]:
@@ -63,6 +75,7 @@ def archivos_permitidos():
 
 class Servidor(ThreadingHTTPServer):
     daemon_threads = True
+    allow_reuse_address = False   # en Windows dejaría que dos programas abran el mismo puerto
 
     def handle_error(self, request, client_address):
         if isinstance(sys.exc_info()[1], (ConnectionAbortedError, ConnectionResetError, BrokenPipeError)):
@@ -142,6 +155,10 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(cuenta.estado())
             if u.path == "/api/dispositivos":
                 return self._json({"dispositivos": cuenta.dispositivos(), "dias_nuevo": cuenta.DIAS_NUEVO})
+            if u.path == "/api/tiktok/creador":  # qué deja publicar TikTok a esa cuenta (modo directo)
+                return self._json(tiktok.info_creador(q.get("cuenta") or None))
+            if u.path == "/api/preparacion":  # qué falta para conectar cada red (sin claves secretas)
+                return self._json(preparacion.estado())
             if u.path == "/api/cuenta/carpetas":  # elegir la carpeta del proyecto (cuenta.js): las carpetas de la cuenta
                 return self._json({"ok": True, **cuenta.carpetas_para_elegir()})
             if u.path == "/api/actualizacion":
@@ -175,17 +192,23 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._ir(tiktok.url_conectar())
             if u.path == "/conectar/youtube":
                 return self._ir(youtube.url_conectar())
-            if u.path in ("/oauth/tiktok", "/oauth/google"):
+            if u.path == "/conectar/meta":  # Instagram y Facebook: todas las páginas de la persona con su Instagram
+                return self._ir(meta.url_conectar())
+            if u.path in ("/oauth/tiktok", "/oauth/google", "/oauth/meta"):
                 if q.get("error"):
-                    return self._html(f"<h2>No se conectó: {q.get('error_description') or q['error']}</h2>")
-                c = (tiktok if u.path.endswith("tiktok") else youtube).recibir_codigo(q.get("code", ""), q.get("state", ""))
+                    return self._html(pagina("No se conectó la cuenta", "La red respondió: "
+                                             + (q.get("error_description") or q.get("error_message") or q["error"])))
+                con = {"tiktok": tiktok, "google": youtube, "meta": meta}[u.path.rsplit("/", 1)[-1]]
+                c = con.recibir_codigo(q.get("code", ""), q.get("state", ""))
                 nucleo.anotar(f"Conectado {u.path.rsplit('/', 1)[-1]}" + (f" · {c['nombre']}" if isinstance(c, dict) and c.get("nombre") else ""))
-                return self._html("<h2>Listo, cuenta conectada. Ya puedes cerrar esta pestaña.</h2>"
-                                  "<script>setTimeout(()=>location='/',1500)</script>")
+                return self._html(pagina("Listo, cuenta conectada", "Ya puedes cerrar esta pestaña. Te llevo de vuelta al Publicador…",
+                                         "<script>setTimeout(()=>location='/',1500)</script>"))
             return self._json({"error": "no existe"}, 404)
         except Exception as e:
             traceback.print_exc()
-            return self._html(f"<h2>Error</h2><pre>{e}</pre>", 500) if not u.path.startswith("/api") else self._json({"error": str(e)}, 500)
+            if u.path.startswith("/api"):
+                return self._json({"error": str(e)}, 500)
+            return self._html(pagina("Algo salió mal", f"{e}\n\nSi faltan las llaves de la red, ponlas en la pestaña Preparación."), 500)
 
     def do_POST(self):
         u = urlparse(self.path)
@@ -202,6 +225,10 @@ class Manejador(BaseHTTPRequestHandler):
         try:
             if u.path == "/api/entrar":  # entrar con Google: sesión común de las tres apps
                 return self._json({"ok": True, "cuenta": cuenta.entrar(str(d.get("link", "")))})
+            if u.path == "/api/preparacion":  # guardar las llaves de una red o en qué va su revisión
+                if d.get("accion") == "revision":
+                    return self._json(preparacion.guardar_revision(str(d.get("red")), str(d.get("valor"))))
+                return self._json(preparacion.guardar_llaves(d.get("cambios") or {}))
             if u.path == "/api/cuenta/primera":  # entrar y elegir (o crear) la carpeta del proyecto (cuenta.js)
                 return self._json({"ok": True, **cuenta.primera(d)})
             if u.path == "/api/salir":
@@ -224,7 +251,10 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(nucleo.importar(d["ruta"]))
             if u.path == "/api/config":
                 permitidas = {"simular", "tiktok_modo", "tiktok_privacidad", "youtube_privacidad",
-                              "horarios_video", "horario_carrusel", "pauta", "carpetas_produccion", "sugeridor"}
+                              "horarios_video", "horario_carrusel", "pauta", "carpetas_produccion", "sugeridor",
+                              "atraso_max_min"}
+                if isinstance(d.get("sugeridor"), dict):
+                    d["sugeridor"] = sugeridor.validar_ajustes(d["sugeridor"])
                 nucleo.guardar_config({k: v for k, v in d.items() if k in permitidas})
                 if "simular" in d:
                     nucleo.anotar("Modo simulación " + ("PRENDIDO" if d["simular"] else "APAGADO: ahora sí sale a redes"))
@@ -240,22 +270,27 @@ class Manejador(BaseHTTPRequestHandler):
                             trabadas.append(p["codigo"])
                 nucleo.anotar(f"Aprobadas {n} piezas del {d['dia']}" + (f" · trabadas por palabras: {trabadas}" if trabadas else ""))
                 return self._json({"aprobadas": n, "trabadas": trabadas})
-            if len(partes) == 3 and partes[0] == "api" and partes[1] in ("tiktok", "youtube") \
+            if len(partes) == 3 and partes[0] == "api" and partes[1] in ("tiktok", "youtube", "instagram", "facebook") \
                     and partes[2] in ("defecto", "quitar"):   # varias cuentas por red
                 red = partes[1]
                 if partes[2] == "defecto":
                     nucleo.guardar_config({f"{red}_cuenta": d["id"]})
+                elif red in ("instagram", "facebook"):
+                    meta.quitar_cuenta(red, d["id"])
+                    nucleo.anotar(f"Cuenta de {red} quitada")
                 else:
                     (tiktok if red == "tiktok" else youtube).quitar_cuenta(d["id"])
                     nucleo.anotar(f"Cuenta de {red} quitada")
                 return self._json({"ok": True})
+            if u.path == "/api/listos/bajar":   # ver una pieza de Drive antes de pasarla a la cola
+                return self._json(produccion.bajar(str(d.get("ruta", ""))))
             if u.path == "/api/listos/a_la_cola":
                 return self._json(produccion.a_la_cola(d.get("rutas") or [], d.get("redes") or [], d.get("cuentas"),
                                                        d.get("modo") or "repartir", d.get("desde"), d.get("por_dia"), d.get("aprobar") is True))
             if u.path == "/api/sugerencias/aceptar":
                 return self._json(sugeridor.aceptar(d.get("items") or [], d.get("aprobar") is True))
             if u.path == "/api/sugerencias/ya_salio":
-                return self._json(sugeridor.ya_salio(d["ruta"], d.get("si", True) is not False))
+                return self._json(sugeridor.ya_salio(d["ruta"], d.get("si", True) is not False, d.get("clave") or None))
             if u.path == "/api/metricas":
                 return self._json(nucleo.recoger_metricas(d.get("semana")))
             if partes[:2] == ["api", "pub"]:
@@ -268,9 +303,15 @@ class Manejador(BaseHTTPRequestHandler):
                     nucleo.borrar(pid)
                     return self._json({"ok": True})
                 if accion == "publicar":
-                    reds = [d["red"]] if d.get("red") else [
-                        r for r, x in nucleo.buscar(nucleo.cola(), pid)["redes"].items()
-                        if x.get("activa") and x.get("estado") in ("pendiente", "error")]
+                    pub = nucleo.buscar(nucleo.cola(), pid)
+                    if not pub:
+                        raise ValueError("Esa publicación ya no está en la cola")
+                    # solo lo que falta o falló: lo que ya salió o está subiendo no se vuelve a subir
+                    sirve = ("pendiente", *nucleo.REINTENTABLES)
+                    reds = [r for r, x in pub["redes"].items() if (r == d["red"] if d.get("red") else x.get("activa"))
+                            and x.get("estado", "pendiente") in sirve]
+                    if d.get("red") and not reds:
+                        raise ValueError(f"{d['red']} ya salió o se está subiendo: no la subo otra vez")
                     for r in reds:
                         nucleo.cambiar(pid, {"redes": {r: {"estado": "pendiente"}}})
                         threading.Thread(target=nucleo.publicar, args=(pid, r), daemon=True).start()
@@ -292,8 +333,14 @@ class Manejador(BaseHTTPRequestHandler):
 
 
 def main():
-    puerto = int(os.environ.get("PUBLICADOR_PUERTO") or nucleo.config()["puerto"])
+    puerto = nucleo.puerto()
+    os.environ["PUBLICADOR_PUERTO"] = str(puerto)   # las direcciones de vuelta (OAuth) usan este mismo puerto
     inicio = time.time()
+    if not nucleo.tomar_cerrojo():
+        msg = f"Ya hay un Publicador abierto con estos datos ({nucleo.PUBLICACION}). Uso ese y no abro otro."
+        nucleo.anotar(msg)
+        print(msg, flush=True)
+        sys.exit(3)
     srv = Servidor(("127.0.0.1", puerto), Manejador)
     nucleo.arrancar_reloj()
     cuenta.iniciar("Publicador", nucleo.VERSION)

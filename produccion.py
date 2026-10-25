@@ -1,7 +1,8 @@
-"""Conexión con producción: los videos que la Sala deja listos en V.FINALES de cada producción.
+"""Conexión con producción: lo que la Sala de edición y la Sala de diseño dejan terminado en Drive.
 
-Lee las carpetas de producción (la de Drive «EDICIÓN DE VIDEOS» y la copia de la Sala) sin que tengas que importar
-nada a mano. En la pestaña Listos eliges cuáles, a qué redes y cuándo, y pasan juntos a la cola.
+Lo lee salas.py desde la carpeta del proyecto de Drive (la misma cuenta de las tres apps): los videos de V.FINALES
+de cada producción y los posts y carruseles de DISEÑO/…/FINAL. En la pestaña Listos eliges la semana y el
+proyecto, marcas cuáles, a qué redes y cuándo, y pasan juntos a la cola.
 """
 import os
 import time
@@ -9,41 +10,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import nucleo
-
-FINALES = ("V.FINALES", "VIDEOS FINALES", "listos")
-EXT_VIDEO = (".mp4", ".mov")
-EXT_FOTO = (".png", ".jpg", ".jpeg", ".webp")
-DRIVE_ID = "1l4PyMCGfv0PvAIFTlcySbgcfBuN64ciu"   # carpeta compartida EDICIÓN DE VIDEOS
+import salas
 
 
 def carpetas():
-    """Las carpetas donde viven las producciones. Si no configuraste ninguna, se buscan solas."""
-    propias = [c for c in nucleo.config().get("carpetas_produccion") or [] if c]
-    if propias:
-        return [Path(c) for c in propias if Path(c).is_dir()]
-    candidatas = []
-    for letra in "GHIJKLMNOPDEF":
-        candidatas += [Path(f"{letra}:/.shortcut-targets-by-id/{DRIVE_ID}/EDICIÓN DE VIDEOS"),
-                       Path(f"{letra}:/Mi unidad/EDICIÓN DE VIDEOS"), Path(f"{letra}:/My Drive/EDICIÓN DE VIDEOS")]
-    raiz = nucleo.PUBLICACION.parent      # REDES SOCIALES - SUPLEVET
-    candidatas += [raiz / "1_PRODUCCION" / "editor" / "drive", raiz / "1_PRODUCCION" / "editor" / "datos" / "drive"]
-    vistas, out = set(), []
-    for c in candidatas:
-        try:
-            if c.is_dir() and c.resolve() not in vistas:
-                vistas.add(c.resolve())
-                out.append(c)
-        except OSError:
-            pass
-    return out
-
-
-def _carpeta_finales(prod):
-    for nombre in FINALES:
-        f = prod / nombre
-        if f.is_dir():
-            return f
-    return None
+    """Las carpetas de la PC con la forma del proyecto de Drive (para los guiones y por si no hay conexión)."""
+    return salas.espejos()
 
 
 _memo = {"cuando": 0, "datos": None}
@@ -52,63 +24,81 @@ _memo = {"cuando": 0, "datos": None}
 def listos(forzar=False):
     """Lo mismo que _leer, guardado 20 segundos: la pantalla pide portadas y videos muchas veces seguidas."""
     if forzar or not _memo["datos"] or time.time() - _memo["cuando"] > 20:
-        _memo.update(cuando=time.time(), datos=_leer())
+        _memo.update(cuando=time.time(), datos=_leer(forzar))
     return _memo["datos"]
 
 
-def _leer():
-    """{producciones: [{nombre, raiz, piezas: [...]}]} con lo que hay en V.FINALES y si ya está en la cola."""
+def _leer(forzar=False):
+    """{producciones: [{nombre, tipo, piezas}], semanas, drive} con lo terminado en las salas y si ya está en la cola."""
     en_cola = {}
     for p in nucleo.cola()["publicaciones"]:
         for a in p.get("archivos", []):
             en_cola[os.path.normcase(a)] = p
-    vistos, prods = set(), []
-    for raiz in carpetas():
-        try:
-            hijos = sorted([h for h in raiz.iterdir() if h.is_dir() and not h.name.startswith(("_", "."))],
-                           key=lambda h: h.stat().st_mtime, reverse=True)
-        except OSError:
-            continue
-        for prod in hijos:
-            fin = _carpeta_finales(prod)
-            if not fin or prod.name in vistos:   # la misma producción en Drive y en la copia de la Sala: va una vez
-                continue
-            piezas = []
-            for v in sorted(fin.iterdir()):
-                if v.suffix.lower() in EXT_VIDEO and v.is_file():
-                    piezas.append(_pieza_video(prod, v, en_cola))
-            # carruseles: una subcarpeta con fotos dentro de V.FINALES
-            for sub in sorted(x for x in fin.iterdir() if x.is_dir()):
-                fotos = sorted(f for f in sub.iterdir() if f.suffix.lower() in EXT_FOTO)
-                if fotos:
-                    piezas.append(_pieza_carrusel(prod, sub, fotos, en_cola))
-            if piezas:
-                vistos.add(prod.name)
-                prods.append({"nombre": prod.name, "raiz": str(raiz), "piezas": piezas})
-    return {"producciones": prods, "carpetas": [str(c) for c in carpetas()]}
+        for rel in p.get("drive") or []:
+            en_cola["drive:" + rel] = p
+    grupos = {}
+    piezas = salas.piezas(forzar)
+    for x in piezas:
+        ruta = x["archivos"][0] if x["tipo"] == "video" else str(Path(x["archivos"][0]).parent)
+        x.update(ruta=ruta, bajado=all(os.path.isfile(a) for a in x["archivos"]),
+                 en_cola=_ya(x["archivos"], ["drive:" + r for r in x["drive"]], en_cola))
+        nombre = "Sala de diseño" if x["proyecto"] == "DISEÑO" else x["proyecto"]
+        grupos.setdefault(nombre, []).append(x)
+    prods = []
+    for nombre, ps in grupos.items():
+        ps.sort(key=lambda x: (x.get("semana") or "", x.get("dia") or 99, x["codigo"]))
+        prods.append({"nombre": nombre, "tipo": "diseno" if nombre == "Sala de diseño" else "edicion", "piezas": ps,
+                      "reciente": max(x["creado"] for x in ps)})
+    prods.sort(key=lambda p: p["reciente"], reverse=True)
+    return {"producciones": prods, "semanas": salas.semanas(piezas), "drive": salas.estado(),
+            "carpetas": [str(c) for c in carpetas()]}
 
 
-def _ya(rutas, en_cola):
-    p = next((en_cola[os.path.normcase(str(r))] for r in rutas if os.path.normcase(str(r)) in en_cola), None)
+def _ya(rutas, claves, en_cola):
+    p = next((en_cola[k] for k in [*(os.path.normcase(str(r)) for r in rutas), *claves] if k in en_cola), None)
     return {"id": p["id"], "fecha": p.get("fecha"), "aprobado": p.get("aprobado")} if p else None
 
 
-def _pieza_video(prod, v, en_cola):
-    jpg = next((v.with_suffix(e) for e in (".jpg", ".png", ".jpeg") if v.with_suffix(e).exists()), None)
-    txt = v.with_suffix(".txt")
-    st = v.stat()
-    return {"ruta": str(v), "codigo": v.stem, "tipo": "video", "produccion": prod.name, "archivos": [str(v)],
-            "portada": str(jpg) if jpg else None, "copy": nucleo._leer_txt_copy(txt) if txt.exists() else {},
-            "tamano_mb": round(st.st_size / 1048576, 1), "creado": datetime.fromtimestamp(st.st_mtime).isoformat(timespec="minutes"),
-            "en_cola": _ya([v], en_cola)}
+def pieza(ruta):
+    return next((x for prod in listos()["producciones"] for x in prod["piezas"] if x["ruta"] == ruta), None)
 
 
-def _pieza_carrusel(prod, sub, fotos, en_cola):
-    txt = sub / "copy.txt"
-    return {"ruta": str(sub), "codigo": sub.name, "tipo": "carrusel", "produccion": prod.name, "archivos": [str(f) for f in fotos],
-            "portada": str(fotos[0]), "copy": nucleo._leer_txt_copy(txt) if txt.exists() else {},
-            "tamano_mb": round(sum(f.stat().st_size for f in fotos) / 1048576, 1),
-            "creado": datetime.fromtimestamp(sub.stat().st_mtime).isoformat(timespec="minutes"), "en_cola": _ya(fotos, en_cola)}
+def bajar(ruta):
+    """Baja de Drive los archivos de una pieza de Listos (para verla antes de pasarla a la cola)."""
+    x = pieza(ruta)
+    if not x:
+        raise ValueError("Esa pieza ya no está en Listos")
+    salas.asegurar(x)
+    x["bajado"] = True
+    return x
+
+
+def cuerpo_de(p):
+    """El cuerpo del brief (C1, C2…) de un video de Listos: el que dejó la Sala o el que dice su nombre."""
+    import re
+    if re.fullmatch(r"C\d+", p.get("cuerpo") or ""):
+        return p["cuerpo"]
+    m = re.search(r"(?:^|[-_ ])(C\d+)(?=[-_ ]|$)", p.get("codigo") or "", re.I) if p.get("tipo") == "video" else None
+    return m.group(1).upper() if m else None
+
+
+def nueva_desde_listo(p, codigo=None):
+    """Una pieza de Listos → publicación de la cola, con su semana, su cuerpo y de dónde se baja en Drive."""
+    pub = nucleo.nueva_publicacion({"codigo": codigo or p["codigo"], "tipo": p["tipo"], "copy_borrador": p["copy"],
+                                    "semana": p.get("semana"), "cuerpo": cuerpo_de(p), "nivel": p.get("nivel"),
+                                    "publico": p.get("publico")}, Path("/"))
+    pub.update(archivos=p["archivos"], portada=p["portada"], produccion=p["produccion"], proyecto=p.get("proyecto"),
+               drive=p.get("drive") or [], cuerpo=cuerpo_de(p))
+    pub.pop("dia", None)
+    pub.pop("_desde", None)
+    return pub
+
+
+def bajar_en_fondo(pub):
+    try:
+        salas.asegurar(pub)
+    except Exception as e:
+        nucleo.anotar(f"Drive: no pude bajar {pub.get('codigo')} todavía ({e}); lo intento otra vez al publicar")
 
 
 def archivos_permitidos():
@@ -160,20 +150,16 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
         raise ValueError("Esos videos ya están en la cola")
     fechas = _fechas(len(elegidas), modo, desde, por_dia, [p["tipo"] for p in elegidas])
     import copys   # el copy lo escribe el publicador desde el guion; el .txt de la Sala queda de respaldo
-    escritos = {p["ruta"]: copys.generar(p) for p in elegidas if p["tipo"] == "video"}
+    escritos = {p["ruta"]: copys.generar(p, nivel=p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), cuerpo_de(p)).get("nivel"))
+                for p in elegidas if p["tipo"] == "video"}
     nuevas, trabadas = [], []
     with nucleo._candado:
         c = nucleo.cola()
         codigos = {p["codigo"] for p in c["publicaciones"]}
         for p, fecha in zip(elegidas, fechas):
-            codigo = p["codigo"] if p["codigo"] not in codigos else f"{p['produccion'].split()[0]}-{p['codigo']}"
+            codigo = p["codigo"] if p["codigo"] not in codigos else f"{p['proyecto'].split()[0]}-{p['codigo']}"
             codigos.add(codigo)
-            pieza = {"codigo": codigo, "tipo": p["tipo"], "archivos": p["archivos"], "copy_borrador": p["copy"],
-                     "portada": p["portada"]}
-            pub = nucleo.nueva_publicacion(pieza, Path("/"))
-            pub["archivos"] = p["archivos"]
-            pub["portada"] = p["portada"]
-            pub["produccion"] = p["produccion"]
+            pub = nueva_desde_listo(p, codigo)
             pub.pop("dia", None)
             pub.pop("_desde", None)
             pub["fecha"] = fecha
@@ -195,8 +181,11 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
     _memo["datos"] = None
     nucleo.anotar(f"Desde producción: {len(nuevas)} piezas a la cola para {', '.join(redes)} · {modo}"
                   + (f" · sin aprobar por palabras prohibidas: {trabadas}" if trabadas else ""))
+    import threading
+    for pub in nuevas:   # los videos de Drive se van bajando ya, para que estén listos a su hora
+        if pub.get("drive"):
+            threading.Thread(target=bajar_en_fondo, args=(pub,), daemon=True).start()
     if modo == "ahora" and aprobar:
-        import threading
         for pub in nuevas:
             if pub.get("aprobado"):
                 for red in redes:
