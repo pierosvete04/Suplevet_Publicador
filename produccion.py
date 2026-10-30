@@ -210,8 +210,9 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
             if not llevar:
                 continue
             codigo = p["codigo"]
-            if codigos.get(codigo, os.path.normcase(p["archivos"][0])) != os.path.normcase(p["archivos"][0]):
-                codigo = f"{p['proyecto'].split()[0]}-{codigo}"
+            pre = p["proyecto"].split()[0] if p.get("proyecto") else ""
+            if pre and not codigo.startswith(pre + "-") and codigos.get(codigo, os.path.normcase(p["archivos"][0])) != os.path.normcase(p["archivos"][0]):
+                codigo = f"{pre}-{codigo}"
             codigos[codigo] = os.path.normcase(p["archivos"][0])
             pub = nueva_desde_listo(p, codigo)
             pub["fecha"] = fecha

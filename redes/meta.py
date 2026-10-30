@@ -119,13 +119,41 @@ def recibir_codigo(codigo, estado):
     return {"nombre": ", ".join(pg.get("name") or pg["id"] for pg in paginas_fb)}
 
 
+_sistema = {}   # page_id → {"nombre", "ig_usuario", "cuando"}: el nombre real de la página de Preparación
+
+
+def _datos_sistema(pid):
+    """Nombre de la página y usuario de Instagram de la página puesta en Preparación. Se pregunta a Facebook una vez
+    (y otra vez cada 10 min si falló) y se guarda en tokens.json para tenerlo sin conexión."""
+    m = _sistema.get(pid)
+    if m and (m.get("nombre") or time.time() - m["cuando"] < 600):
+        return m
+    guardado = (nucleo.tokens().get("meta_sistema") or {}).get(pid) or {}
+    m = {"nombre": guardado.get("nombre"), "ig_usuario": guardado.get("ig_usuario"), "cuando": time.time()}
+    if not m["nombre"]:
+        try:
+            r = pedir("GET", f"{base()}/{pid}", {"fields": "name,instagram_business_account{username}",
+                                                  "access_token": token()}, tiempo=8)
+            m.update(nombre=r.get("name"), ig_usuario=(r.get("instagram_business_account") or {}).get("username"))
+            if m["nombre"]:
+                todo = dict(nucleo.tokens().get("meta_sistema") or {})
+                todo[pid] = {"nombre": m["nombre"], "ig_usuario": m["ig_usuario"]}
+                nucleo.guardar_token("meta_sistema", todo)
+        except Exception:
+            pass
+    _sistema[pid] = m
+    return m
+
+
 def paginas():
-    """{id de página: {id, nombre, token, ig_id, ig_usuario, persona}}; la de credenciales.env lleva sistema=True."""
+    """{id de página: {id, nombre, token, ig_id, ig_usuario, persona}}; la de Preparación (credenciales.env) lleva sistema=True."""
     cs = {k: v for k, v in (nucleo.tokens().get("meta_paginas") or {}).items() if isinstance(v, dict)}
     c = cred()
     if c["META_TOKEN_USUARIO_SISTEMA"] and c["META_PAGE_ID"] and c["META_PAGE_ID"] not in cs:
-        cs[c["META_PAGE_ID"]] = {"id": c["META_PAGE_ID"], "nombre": "Página de credenciales.env", "token": None,
-                                 "ig_id": c["META_IG_USER_ID"] or None, "ig_usuario": None, "sistema": True}
+        pid = c["META_PAGE_ID"]
+        m = _datos_sistema(pid)
+        cs[pid] = {"id": pid, "nombre": m["nombre"] or f"Página de Facebook ···{pid[-4:]}", "token": None,
+                   "ig_id": c["META_IG_USER_ID"] or None, "ig_usuario": m["ig_usuario"], "sistema": True}
     return cs
 
 
@@ -174,12 +202,12 @@ def quitar_cuenta(red, cid):
     cs = {k: v for k, v in (nucleo.tokens().get("meta_paginas") or {}).items() if isinstance(v, dict)}
     if red == "facebook":
         if cid not in cs:
-            raise ErrorRed("Esta página viene de credenciales.env: para quitarla, borra META_PAGE_ID de ese archivo")
+            raise ErrorRed("Esta página viene de las llaves de Preparación: para quitarla, borra ahí el ID de la página")
         cs.pop(cid)
     else:
         pg = next((v for v in cs.values() if v.get("ig_id") == cid), None)
         if not pg:
-            raise ErrorRed("Esta cuenta viene de credenciales.env: para quitarla, borra META_IG_USER_ID de ese archivo")
+            raise ErrorRed("Esta cuenta viene de las llaves de Preparación: para quitarla, borra ahí el ID de Instagram")
         pg["ig_id"] = pg["ig_usuario"] = None
     nucleo.guardar_token("meta_paginas", cs)
     for r in ("facebook", "instagram"):

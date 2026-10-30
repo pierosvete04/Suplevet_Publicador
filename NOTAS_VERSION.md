@@ -1,3 +1,22 @@
+## 1.10.0 · Qué publicar con fichas grandes y menos sorpresas
+
+- **Hoy (Qué publicar) con fichas como en el celular**: cada cuenta es una franja a todo el ancho y cada video es una ficha vertical con la imagen grande y la hora encima. Al pasar el mouse el video se mueve sin sonido. Con un clic se ve en grande.
+- **El día entero de cada cuenta**: lo que ya está en la cola sale también como ficha (con «En la cola», «Simulada» o «Con error»), ordenado por hora junto a lo sugerido. Un clic lo abre para editarlo.
+- La casilla de cada ficha está arriba a la derecha. Lo que no va se ve en gris con «No va», y marcar o desmarcar ya no salta la página. Cada ficha tiene «Cambiar» y un menú «⋯» con «Ver en grande» y «Ya lo publiqué a mano aquí».
+- **«Nuevo» dice la verdad**: solo sale cuando el video no está en la cola de ninguna cuenta ni va a otra ese mismo día. Las cuentas se nombran con su red («TikTok · Suplevet»), porque hay nombres repetidos.
+- **Nunca el mismo cuerpo el mismo día**, también con lo que pasó por Subir contenido (antes se escapaba: un C1 en la cola y otro C1 sugerido a los 5 minutos). Lo sugerido queda al menos a 30 minutos de lo que ya está en la cola.
+- Lo que falló al publicar ya no se vuelve a sugerir en esa cuenta: al reintentarlo podía salir dos veces.
+- La página de Facebook puesta en Preparación muestra su nombre real (antes decía «Página de credenciales.env»).
+- «Cambiar» en un carrusel lo cambia solo en esa cuenta. «Armar de nuevo» vuelve a leer Drive; cambiar la fecha o «Cambiar» ya no esperan a Drive.
+- Ajustes ya no dice «Hay cambios sin guardar» si no cambiaste nada.
+- Los horarios de Conexiones se guardan siempre como 08:00 (con «8:00» la cola se ordenaba mal) y avisa si una hora no vale.
+- Una pieza aprobada no se puede quedar sin día ni hora (nunca habría salido).
+- Los botones ya no fallan con nombres que llevan apóstrofo («Mascotas D'Lux»). El código ya no sale como «P04-P04-…».
+- El visor: las flechas ya no reinician el video, el foco entra en «Cerrar» y vuelve al botón que lo abrió, y Tab no se escapa de la ventana.
+- Las preguntas de confirmación que apagan o borran algo dejan el foco en «Cancelar». «Apagar simulación» va en rojo.
+- Palabras parejas: «Qué publicar», «Armar de nuevo», «videos terminados», «Ya está publicado», «Hora del primer video»… Los avisos ya no dicen «1 cuerpos».
+- Los avisos flotantes ya no tapan la barra de abajo; las casillas miden lo mismo que los botones.
+
 ## 1.9.0 · Varias cuentas de verdad y copies que calzan con el video
 
 - **Conectar otra cuenta** ahora abre tu navegador (antes se abría dentro del Publicador y siempre volvía a entrar la misma cuenta). Ahí cambias de cuenta o cierras sesión, pulsas «Agregar cuenta» y la nueva aparece sola en Conexiones.

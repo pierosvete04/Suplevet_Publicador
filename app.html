@@ -12,7 +12,7 @@
   --fondo:#04060b;--superficie:#0b111e;--superficie-2:#101829;--elevado:#152038;--texto:#edf3ff;--suave:#8494b4;--borde:#1a2740;--borde-2:#24365a;
   --ok:#4ade9b;--ok-fondo:rgba(74,222,155,.13);--mal:#ff6b7d;--mal-fondo:rgba(255,107,125,.13);--aviso:#ffb547;--aviso-fondo:rgba(255,181,71,.13);
   --info:#5ee1ff;--info-fondo:rgba(94,225,255,.12);--vidrio:rgba(4,6,11,.8);--tarjeta:linear-gradient(180deg,rgba(16,24,41,.9),rgba(11,17,30,.92));
-  --sombra:0 1px 2px rgba(0,0,0,.35);--sombra-alta:0 20px 50px rgba(0,0,0,.55);--r:12px;--r-chico:8px;--anillo:0 0 0 3px rgba(61,139,255,.45);
+  --sombra:0 1px 2px rgba(0,0,0,.35);--sombra-alta:0 20px 50px rgba(0,0,0,.55);--r:var(--r-caja);--r-chico:8px;--anillo:0 0 0 3px rgba(61,139,255,.45);
   --f:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;--fd:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;--mono:"Cascadia Mono",Consolas,monospace;
   --tt:#EEE;--ig:#C13584;--fb:#1877F2;--yt:#E62117}
 :root[data-tema="claro"]{color-scheme:light;
@@ -106,7 +106,7 @@ main{padding:20px 20px 60px;max-width:1500px;margin:auto}
 .btn.peligro{background:transparent;color:var(--mal);border-color:var(--borde)}.btn.peligro:hover{background:var(--mal-fondo)}
 .btn.chico{min-height:32px;padding:0 10px;font-size:13px}
 label.campo{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--suave)}
-input,select,textarea{font:inherit;font-size:14px;color:var(--texto);background:var(--superficie-2);border:1px solid var(--borde);border-radius:8px;padding:8px 10px;min-height:38px;transition:border-color .15s}
+input,select,textarea{font:inherit;font-size:14px;color:var(--texto);background:var(--superficie-2);border:1px solid var(--borde);border-radius:8px;padding:8px 10px;min-height:var(--alto-btn);transition:border-color .15s}
 input:hover,select:hover,textarea:hover{border-color:var(--borde-2)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:#3d8bff;box-shadow:var(--anillo)}
 textarea{width:100%;min-height:150px;resize:vertical;line-height:1.5}
@@ -278,7 +278,7 @@ dialog.pop-notifs::backdrop, :root[data-tema] dialog.pop-notifs::backdrop { back
 /* visor de publicadas (carruseles) */
 .visor-velo{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;place-items:center;z-index:45;padding:16px}
 .visor-velo.on{display:grid}
-.visor-m{display:grid;grid-template-columns:minmax(0,1fr) 340px;width:min(880px,100%);max-height:calc(100vh - 32px);overflow:hidden;background:var(--superficie);border:1px solid var(--borde);border-radius:14px}
+.visor-m{display:grid;grid-template-columns:minmax(0,1fr) 340px;width:min(880px,100%);max-height:calc(100vh - 32px);overflow:hidden;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--r-ventana)}
 .visor-i{position:relative;background:#000;display:grid;place-items:center;max-height:calc(100vh - 32px)}
 .visor-i img{max-width:100%;max-height:calc(100vh - 32px);object-fit:contain;display:block}
 .flecha{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:0;background:rgba(255,255,255,.88);color:#000;font:800 18px var(--f);cursor:pointer}
@@ -418,6 +418,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .lista-piezas label:hover{background:var(--superficie)}
 
 /* ---------- Avisos y diálogos ---------- */
+body:has(.barra-l) #toasts{bottom:118px}
 #toasts{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:60;max-width:min(420px,calc(100% - 40px))}
 .toast{display:flex;gap:10px;align-items:flex-start;background:#1d4ed8;color:#fff;padding:12px 14px;border-radius:10px;box-shadow:var(--sombra-alta);font-size:14px;animation:entra .2s ease}
 .toast.mal{background:var(--mal)}.toast.ok{background:var(--ok)}
@@ -425,26 +426,65 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 dialog{border:0;border-radius:14px;padding:0;width:min(460px,calc(100% - 32px));background:var(--superficie);color:var(--texto);box-shadow:var(--sombra-alta)}
 dialog::backdrop{background:rgba(10,18,28,.5)}
 dialog .dc{padding:20px 22px}
-dialog h3{margin:0 0 8px;font-size:17px}
+dialog h2,dialog h3{margin:0 0 8px}
 dialog p{margin:0;color:var(--suave);white-space:pre-line}
 dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;background:var(--superficie-2);border-top:1px solid var(--borde)}
 
 /* ---------- Hoy: sugerencias por cuenta ---------- */
-.sug-rej{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
-.sug-d{padding:0;margin:0;overflow:hidden}
-.sug-cab{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--borde)}
-.sug-cab b{display:block;font-size:14px}.sug-cab .suave{font-size:12px}
-.sug-f{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--borde)}
-.sug-f.off{opacity:.45}
-.sug-f .hora{font:600 12px var(--mono);color:var(--celeste);width:42px;flex:none}
-.sug-f .c{flex:1}.sug-f .c b{font:600 12px var(--mono);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sug-f .c p{margin:2px 0 0;font-size:12px;color:var(--suave)}.sug-f .c p.ojo{color:var(--aviso)}
-.sug-f input[type=checkbox]{width:18px;height:18px;accent-color:#3d8bff;flex:none;cursor:pointer}
-.sug-acc{display:flex;gap:0;flex:none}.sug-acc .btn{min-height:30px;padding:0 7px}
-.sug-pie{padding:10px 14px;font-size:12px;color:var(--suave)}.sug-pie.falta{color:var(--aviso);background:var(--aviso-fondo)}
+/* cada cuenta es una franja a todo el ancho; cada pieza, una ficha vertical como se ve en el celular */
+main:has(.sug-rej){max-width:1840px}
+.sug-rej{display:grid;gap:14px}
+.sug-rej[aria-busy=true]{opacity:.5;pointer-events:none}
+.sug-d{padding:0;margin:0}
+.sug-cab{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--borde)}
+.sug-cab .nom{flex:1;min-width:0}.sug-cab .nom>b{display:block;font:650 13.5px/1.3 var(--fd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sug-cupo{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px;font-size:12px;color:var(--suave)}.sug-cupo b{color:var(--texto)}
+.sug-barra{display:flex;gap:2px}.sug-barra i{width:10px;height:4px;border-radius:2px;background:var(--borde-2)}
+.sug-barra i.ok{background:var(--ok)}.sug-barra i.sug{background:var(--naranja)}
+.sug-tira{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:12px 14px}
+.sug-t{position:relative;display:flex;flex-direction:column;min-width:0;background:var(--superficie-2);border:1px solid var(--borde);border-radius:var(--r-campo);transition:border-color .15s,background .15s}
+.sug-t:hover,.sug-t:focus-within{border-color:var(--borde-2)}
+.sug-media{position:relative;aspect-ratio:9/16;background:#000;overflow:hidden;border-radius:calc(var(--r-campo) - 1px) calc(var(--r-campo) - 1px) 0 0}
+.sug-t.carr .sug-media{aspect-ratio:4/5}
+.sug-media>img,.sug-media>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.sug-vivo{z-index:1;opacity:0;transition:opacity .2s}.sug-media.vivo .sug-vivo{opacity:1}
+.en-drive{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;padding:10px;text-align:center;color:var(--suave);font-size:12px;background:var(--superficie)}
+.en-drive svg.i{width:26px;height:26px;opacity:.6}.en-drive small{font-size:11px;opacity:.8}
+.sug-ver{position:absolute;inset:0;z-index:1;border:0;padding:0;cursor:zoom-in;display:grid;place-items:center;color:#fff;background:linear-gradient(rgba(0,0,0,.45),transparent 24%,transparent 70%,rgba(0,0,0,.55))}
+.sug-ver svg.i{width:46px;height:46px;padding:13px;border-radius:50%;background:rgba(4,6,11,.62);opacity:0;transition:opacity .15s}
+.sug-ver:hover svg.i,.sug-ver:focus-visible svg.i{opacity:1}.sug-media.vivo .sug-ver svg.i{opacity:0}
+.sug-ver:focus-visible{box-shadow:inset var(--anillo);border-radius:0}
+.sug-hora,.sug-sello,.sug-fuera{position:absolute;z-index:2;pointer-events:none;color:#fff;background:rgba(4,6,11,.74);backdrop-filter:blur(6px);border-radius:var(--r-chip)}
+.sug-hora{top:8px;left:8px;font:700 12.5px/1 var(--mono);padding:5px 8px}
+.sug-sello{bottom:8px;left:8px;font:600 11.5px/1 var(--f);padding:4px 8px}
+.sug-sello.nuevo{background:var(--naranja-fuerte)}.sug-sello.ojo{background:var(--aviso);color:#1a1200}
+.sug-fuera{display:none;top:50%;left:50%;transform:translate(-50%,-50%);font:700 12px var(--f);padding:6px 12px;white-space:nowrap}
+.sug-sel{position:absolute;z-index:3;top:4px;right:4px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer}
+.sug-sel input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}
+.sug-sel span{width:22px;height:22px;border-radius:7px;border:2px solid #fff;background:rgba(4,6,11,.45);display:grid;place-items:center;color:#fff;pointer-events:none}
+.sug-sel input:checked+span{background:var(--naranja);border-color:var(--naranja)}
+.sug-sel svg.i{width:14px;height:14px;stroke-width:3;opacity:0}.sug-sel input:checked+span svg.i{opacity:1}
+.sug-sel input:focus-visible+span{box-shadow:var(--anillo)}
+.sug-info{display:flex;flex-direction:column;gap:4px;padding:8px 10px 6px;flex:1;min-width:0}
+.sug-gancho{margin:0;font-size:12.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.sug-cod,.sug-mot{margin:0;color:var(--suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sug-cod{font:600 11px var(--mono)}.sug-mot{font-size:11.5px}.sug-mot.ojo{color:var(--aviso)}
+.sug-acc{display:flex;gap:4px;padding:0 6px 6px}.sug-acc>.btn{flex:1;min-width:0}
+.sug-menu{position:static}.sug-menu>summary{list-style:none;width:var(--alto-btn-chico);padding:0;justify-content:center}.sug-menu>summary::-webkit-details-marker{display:none}
+.sug-menu-l{position:absolute;left:6px;right:6px;bottom:42px;z-index:5;display:grid;padding:4px;background:var(--superficie);border:1px solid var(--borde-2);border-radius:var(--r-campo);box-shadow:var(--sombra-alta)}
+.sug-menu-l button{all:unset;display:flex;gap:8px;align-items:center;padding:8px 10px;line-height:1.3;border-radius:7px;font-size:13px;cursor:pointer}
+.sug-menu-l button:hover,.sug-menu-l button:focus-visible{background:var(--superficie-2)}
+.sug-t.ya{background:transparent}.sug-t.ya .sug-media>:is(img,video){opacity:.6}.sug-t.ya .sug-ver{cursor:pointer}
+.sug-sello.cola{background:var(--ok-fondo);color:var(--ok);border:1px solid var(--ok)}
+.sug-t.off{border-style:dashed;background:transparent}
+.sug-t.off .sug-media>:is(img,video,.en-drive){filter:grayscale(1);opacity:.3}.sug-t.off .sug-info{opacity:.5}.sug-t.off .sug-fuera{display:block}
+.sug-pie{padding:10px 14px;font-size:12px;color:var(--suave);border-top:1px solid var(--borde)}.sug-pie.falta{color:var(--aviso);background:var(--aviso-fondo)}
+.sug-pie:last-child{border-radius:0 0 var(--r-caja) var(--r-caja)}
 .res-s{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}.res-s .chip{padding:3px 10px;font-size:12.5px}.res-s .chip b{color:var(--texto);margin-right:4px}
-.aj-s{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:10px}
-@media (max-width:640px){.sug-rej{grid-template-columns:1fr}.sug-f{flex-wrap:wrap}.sug-f .c{flex-basis:calc(100% - 140px)}}
+.aj-s{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:10px;align-items:end}
+.esp-barra{height:110px}
+@media (hover:none),(max-width:640px){.sug-ver svg.i{opacity:.85}}
+@media (max-width:640px){.sug-tira{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}.esp-barra{height:330px}}
 </style>
 <style id="estilo-comun">
 /* Lo común de las tres apps (Sala de edición, Sala de diseño y Publicador). Es el mismo bloque en las tres: si se
@@ -508,7 +548,7 @@ h3 { font: 650 13px/1.35 var(--fd); }
 <main id="main"></main>
 <div class="velo" id="velo" onclick="cerrarEditor()"></div>
 <aside class="panel" id="panel" aria-label="Editar pieza"></aside>
-<div class="visor-velo" id="visor" onclick="if(event.target==this)cerrarVisor()"><div class="visor-m" id="visor-m" role="dialog" aria-modal="true"></div></div>
+<div class="visor-velo" id="visor" onclick="if(event.target==this)cerrarVisor()"><div class="visor-m" id="visor-m" role="dialog" aria-modal="true" aria-labelledby="visor-t"></div></div>
 <div id="toasts" aria-live="polite"></div>
 <dialog id="dlgProcesos" class="pop-notifs" aria-labelledby="procTit">
   <div class="pn-cab">
@@ -524,7 +564,7 @@ h3 { font: 650 13px/1.35 var(--fd); }
   <div id="procActual"></div>
   <div id="procHistorial" class="lista-notifs"></div>
 </dialog>
-<dialog id="dlg"><div class="dc"><h3 id="dlg-t"></h3><p id="dlg-p"></p></div><div class="dp"><button class="btn sec" id="dlg-no">Cancelar</button><button class="btn prim" id="dlg-si">Aceptar</button></div></dialog>
+<dialog id="dlg" aria-labelledby="dlg-t" aria-describedby="dlg-p"><div class="dc"><h2 id="dlg-t"></h2><p id="dlg-p"></p></div><div class="dp"><button class="btn sec" id="dlg-no">Cancelar</button><button class="btn prim" id="dlg-si">Aceptar</button></div></dialog>
 <script src="/cuenta.js"></script>
 <script>
 /* ---------- Íconos (trazos tipo Lucide) ---------- */
@@ -536,7 +576,7 @@ const IC={preparacion:'<path d="M9 4h6v3H9zM7 5H5v16h14V5h-2"/><path d="M8.5 12l
  configuracion:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
  registro:'<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
  subir:'<path d="M12 16V4M6 10l6-6 6 6M4 20h16"/>',editar:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
- check:'<path d="M20 6L9 17l-5-5"/>',x:'<path d="M18 6L6 18M6 6l12 12"/>',enviar:'<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
+ check:'<path d="M20 6L9 17l-5-5"/>',jugar:'<path d="M7 4l13 8-13 8z" fill="currentColor"/>',x:'<path d="M18 6L6 18M6 6l12 12"/>',enviar:'<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
  basura:'<path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/>',mas:'<path d="M12 5v14M5 12h14"/>',reloj:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
  refrescar:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',buscar:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
  carpeta:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',apagar:'<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/>',
@@ -570,19 +610,23 @@ function leer(k){try{return localStorage.getItem("pub_"+k)}catch(e){return null}
 function guardarLocal(k,v){try{localStorage.setItem("pub_"+k,v)}catch(e){}}
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* para meter un texto dentro de onclick="f('…')": esc solo no basta, el navegador devuelve &#39; a ' y corta el texto */
+const jq=x=>esc(String(x??"").replace(/\\/g,"\\\\").replace(/'/g,"\\'"));
+const enc=x=>encodeURIComponent(x).replace(/'/g,"%27");
 const arc=r=>"/archivo?ruta="+encodeURIComponent(r);
 function toast(t,tipo=""){const e=document.createElement("div");e.className="toast "+tipo;e.innerHTML=(tipo=="mal"?ic("alerta"):tipo=="ok"?ic("check"):"")+`<span>${esc(t)}</span>`;$("#toasts").append(e);setTimeout(()=>e.remove(),tipo=="mal"?7000:4000)}
 async function api(u,d){const r=await fetch(u,d===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});const j=await r.json();if(j.error){toast(j.error,"mal");throw j}return j}
 function preguntar(titulo,texto,boton="Aceptar",tipo="prim"){
   return new Promise(res=>{const d=$("#dlg");$("#dlg-t").textContent=titulo;$("#dlg-p").textContent=texto;const si=$("#dlg-si");si.textContent=boton;si.className="btn "+tipo;
-    const fin=v=>{d.close();si.onclick=$("#dlg-no").onclick=null;res(v)};si.onclick=()=>fin(true);$("#dlg-no").onclick=()=>fin(false);d.oncancel=()=>fin(false);d.showModal();si.focus()})}
+    const fin=v=>{d.close();si.onclick=$("#dlg-no").onclick=null;res(v)};si.onclick=()=>fin(true);$("#dlg-no").onclick=()=>fin(false);d.oncancel=()=>fin(false);d.showModal();(tipo=="peligro"?$("#dlg-no"):si).focus()})}
 let _ultimo="";
 async function cargar(forzar){const r=await fetch("/api/estado"),t=await r.text();if(!forzar&&t==_ultimo&&E)return;_ultimo=t;E=JSON.parse(t);pintar()}  /* sin cambios no se repinta: el video de la vista previa no se corta */
 function pintar(){
   const sim=E.config.simular;$("#modo").className="modo "+(sim?"sim":"vivo");$("#modo-t").textContent=sim?"Simulación":"En vivo";
   $("#redes-top").innerHTML=Object.keys(REDES).map(k=>`<button onclick="ir('conexiones')" title="${REDES[k][1]}: ${E.conexiones[k]?.listo?"conectado":"falta conectar"}" aria-label="${REDES[k][1]}: ${E.conexiones[k]?.listo?"conectado":"falta conectar"}">${redIc(k,E.conexiones[k]?.listo?"":"apagada")}</button>`).join("");
   pintarMenu();
-  ({hoy,listos,publicadas,cola,pauta,metricas,conexiones,preparacion,registro,configuracion})[tab]();
+  /* Hoy no depende de la cola: si ya está pintado no se repinta cada 15 s (cortaría la vista previa y la casilla con foco) */
+  if(!(tab=="hoy"&&SUG&&$("#main .sug-rej")))({hoy,listos,publicadas,cola,pauta,metricas,conexiones,preparacion,registro,configuracion})[tab]();
   if(tab!="listos")$("#barra-l")?.remove();
   if(tab!="hoy")$("#barra-s")?.remove();
   if(ed)pintarEditor(false);
@@ -593,7 +637,7 @@ function pintarMenu(){
   const n={cola:porRevisar,listos:nuevos};
   $("#nav").innerHTML=TABS.filter(([k])=>k!="configuracion").map(([k,t])=>`<button class="${k==tab?"on":""}" onclick="ir('${k}')" ${k==tab?'aria-current="page"':""}>${ic(k)}${t}${n[k]?`<span class="cuenta" title="${k=="listos"?"Nuevos sin pasar a la cola":"Por revisar"}">${n[k]}</span>`:""}</button>`).join("");
 }
-function ir(k){tab=k;sucio=false;guardarLocal("tab",k);pintar();scrollTo(0,0)}
+function ir(k){tab=k;sucio=false;guardarLocal("tab",k);$("#main").innerHTML="";pintar();scrollTo(0,0)}
 /* el menú de tu cuenta (cuenta.js): las páginas de Configuración, igual que en las salas */
 function irConf(id){ir("configuracion");document.querySelectorAll(".conf-menu a").forEach(x=>x.classList.toggle("activo",x.getAttribute("href")=="#"+id));$("#"+id)?.scrollIntoView({block:"start"})}
 function menuCuenta(){const enConf=tab=="configuracion",act=document.querySelector(".conf-menu a.activo")?.getAttribute("href");
@@ -659,14 +703,18 @@ function publicadas(){
    (grupos.map(([t,g])=>g.length?`<div class="sec-t"><h2>${t}</h2><span class="etq">${g.length}</span></div><div class="rej">${g.map(x=>celda(x,todas.indexOf(x))).join("")}</div>`:"").join("")||vacio);
 }
 let vis=null,visI=0;
-function abrirVisor(i){vis=PUB.piezas[i];visI=0;pintarVisor();$("#visor").classList.add("on");document.addEventListener("keydown",teclaVisor)}
-function cerrarVisor(){$("#visor").classList.remove("on");$("#visor-m").innerHTML="";document.removeEventListener("keydown",teclaVisor)}
-function teclaVisor(e){if(e.key=="Escape")cerrarVisor();if(e.key=="ArrowRight")moverVisor(1);if(e.key=="ArrowLeft")moverVisor(-1)}
+function abrirVisor(i){vis=PUB.piezas[i];visI=0;mostrarVisor()}
+let visDe=null;   /* el botón que abrió el visor: al cerrarlo, el foco vuelve ahí */
+function mostrarVisor(){visDe=document.activeElement;pintarVisor();$("#visor").classList.add("on");document.addEventListener("keydown",teclaVisor);$("#visor-m .visor-cerrar")?.focus()}
+function cerrarVisor(){$("#visor").classList.remove("on");$("#visor-m").innerHTML="";document.removeEventListener("keydown",teclaVisor);if(visDe?.isConnected)visDe.focus();visDe=null}
+function teclaVisor(e){if(e.key=="Escape")cerrarVisor();
+  if(e.key=="Tab"){const f=[...$("#visor-m").querySelectorAll("button,a[href],video[controls]")];if(f.length&&!$("#visor-m").contains(document.activeElement)){e.preventDefault();f[0].focus()}
+    else if(f.length&&e.shiftKey&&document.activeElement==f[0]){e.preventDefault();f.at(-1).focus()}else if(f.length&&!e.shiftKey&&document.activeElement==f.at(-1)){e.preventDefault();f[0].focus()}}if(vis?.fotos.length>1&&e.key=="ArrowRight")moverVisor(1);if(vis?.fotos.length>1&&e.key=="ArrowLeft")moverVisor(-1)}
 function moverVisor(d){visI=(visI+d+vis.fotos.length)%vis.fotos.length;pintarVisor()}
 function pintarVisor(){const x=vis,n=x.fotos.length;
   $("#visor-m").innerHTML=`<div class="visor-i">${x.video?`<video src="${esc(x.video)}" controls autoplay playsinline style="max-width:100%;max-height:calc(100vh - 32px)"></video>`:`<img src="${esc(x.fotos[visI])}" alt="">`}
    ${n>1?`<button class="flecha izq" onclick="moverVisor(-1)" aria-label="Anterior">‹</button><button class="flecha der" onclick="moverVisor(1)" aria-label="Siguiente">›</button><div class="puntos">${x.fotos.map((_,j)=>`<span class="${j==visI?"on":""}"></span>`).join("")}</div>`:""}</div>
-   <div class="visor-l"><div class="fila">${redIc(x.red)}<b>${esc(x.cuenta||REDES[x.red][1])}</b><button class="btn fant chico" style="margin-left:auto" onclick="cerrarVisor()" aria-label="Cerrar">${ic("x")}</button></div>
+   <div class="visor-l"><div class="fila">${x.red?redIc(x.red):ic("carpeta")}<b id="visor-t">${esc(x.cuenta||REDES[x.red]?.[1]||"")}</b><button class="btn fant chico visor-cerrar" style="margin-left:auto" onclick="cerrarVisor()" aria-label="Cerrar" title="Cerrar (Esc)">${ic("x")}</button></div>
    ${x.codigo?`<b style="font:600 13px var(--mono);color:var(--celeste);word-break:break-all">${esc(x.codigo)}</b>`:""}
    <div class="fila" style="gap:6px"><span class="tag">${esc(x.tipo)}${n>1?` · ${visI+1}/${n}`:""}</span><span class="tag">${x.formato}</span><span class="suave">${x.fecha?new Date(x.fecha).toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"}):""}</span></div>
    ${Object.keys(x.met).length?`<div class="met-g">${Object.entries(x.met).map(([k,v])=>`<div><b>${fmt(v)}</b><span>${k}</span></div>`).join("")}</div>`:""}
@@ -717,7 +765,7 @@ function listos(){
   for(const prod of prods){
     const nuevos=prod.piezas.filter(x=>!x.en_cola),todosSel=nuevos.length&&nuevos.every(x=>selL.has(x.ruta)),d=origenDe(prod)=="diseno";
     h+=`<div class="sec-t"><span class="sala-l ${d?"d":"e"}" title="${d?"Sala de diseño":"Sala de edición"}">${d?"D":"E"}</span><h2>${d?"Sala de diseño · posts y carruseles":`Sala de edición · ${esc(cap(prod.nombre))}`}</h2><span class="etq">${prod.piezas.length} ${d?"piezas":"videos finales"} · ${nuevos.length} sin subir</span>
-     ${nuevos.length?`<button class="btn sec chico" onclick="marcarProd('${encodeURIComponent(prod.nombre)}',${!todosSel})">${ic("check")}${todosSel?"Quitar selección":`Marcar los ${nuevos.length}`}</button>`:""}</div>
+     ${nuevos.length?`<button class="btn sec chico" onclick="marcarProd('${enc(prod.nombre)}',${!todosSel})">${ic("check")}${todosSel?"Quitar selección":`Marcar los ${nuevos.length}`}</button>`:""}</div>
      <div class="rej rej-listos">${prod.piezas.map(tarjetaListo).join("")}</div>`;
   }
   $("#main").innerHTML=h+(selL.size?`<div class="espacio-barra"></div>`:"");
@@ -728,10 +776,10 @@ function tarjetaListo(x){
   const media=x.portada?`<img src="${arc(x.portada)}" alt="" loading="lazy">`:x.mini?`<img src="/mini?rel=${encodeURIComponent(x.mini)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'en-drive',textContent:'Video final en Drive'}))">`:x.bajado?`<video src="${arc(x.archivos[0])}#t=1" muted preload="metadata"></video>`
    :`<span class="en-drive">${ic("carpeta")}<span>En Drive</span><small>Se baja al verlo o al publicarlo</small></span>`;
   return`<div class="listo ${on?"on":""} ${ya?"ya":""}" style="aspect-ratio:${x.tipo=="video"?"9/16":"4/5"}">
-   <button class="listo-caja" onclick="marcar('${encodeURIComponent(x.ruta)}')" aria-pressed="${on}" aria-label="Marcar ${esc(x.codigo)}${ya?" (ya está en la cola: puedes mandarlo a otra cuenta)":""}">${media}</button>
+   <button class="listo-caja" onclick="marcar('${enc(x.ruta)}')" aria-pressed="${on}" aria-label="Marcar ${esc(x.codigo)}${ya?" (ya está en la cola: puedes mandarlo a otra cuenta)":""}">${media}</button>
    <span class="marca-sel" aria-hidden="true">${on?ic("check"):""}</span>
    ${x.tipo=="carrusel"?`<span class="tipo-l">${x.clase=="post"?"Post":"▣ "+x.archivos.length}</span>`:""}
-   <button class="jugar-l" onclick="verListo('${encodeURIComponent(x.ruta)}')" aria-label="Ver ${esc(x.codigo)}" title="Ver">${x.tipo=="video"?"▶":ic("ojo")}</button>
+   <button class="jugar-l" onclick="verListo('${enc(x.ruta)}')" aria-label="Ver ${esc(x.codigo)}" title="Ver">${x.tipo=="video"?"▶":ic("ojo")}</button>
    <div class="pie-l"><b title="${esc(x.titulo||x.codigo)}">${esc(x.titulo||x.codigo)}</b>
     <span class="origen-l">${x.tipo=="video"?`Video final · ${esc(x.carpeta||"V.FINALES")}`:`${x.clase=="post"?"Post":"Carrusel"} · ${esc(x.semana||"")}${x.dia?" · "+["","lun","mar","mié","jue","vie","sáb","dom"][x.dia]:""}`}</span>
     ${x.tipo=="video"&&x.posts?.length?`<span class="match-l" title="${esc(x.posts.map(z=>z.titulo||z.codigo).join(", "))}">🔗 Tiene post: ${esc(x.posts[0].titulo||x.posts[0].codigo)}${x.posts.length>1?` +${x.posts.length-1}`:""}</span>`:""}
@@ -741,8 +789,8 @@ function marcar(r){r=decodeURIComponent(r);selL.has(r)?selL.delete(r):selL.add(r
 function marcarProd(n,si){const prod=LIS.producciones.find(p=>p.nombre==decodeURIComponent(n));piezasVisibles(prod).filter(x=>!x.en_cola).forEach(x=>si?selL.add(x.ruta):selL.delete(x.ruta));listos()}
 async function verListo(r){r=decodeURIComponent(r);let x=LIS.producciones.flatMap(p=>p.piezas).find(y=>y.ruta==r);
   if(!x.bajado){toast("Bajando de Drive…");try{Object.assign(x,await api("/api/listos/bajar",{ruta:r}))}catch(e){return}}
-  vis={red:"instagram",cuenta:x.produccion,codigo:x.codigo,tipo:x.tipo=="video"?"Video":"Carrusel",formato:x.tipo=="video"?"9:16":"4:5",fotos:x.tipo=="video"?[]:x.archivos.map(arc),met:{},texto:x.copy?.instagram||x.copy?.tiktok||"",fecha:x.creado,video:x.tipo=="video"?arc(x.archivos[0]):null};
-  visI=0;pintarVisor();$("#visor").classList.add("on");document.addEventListener("keydown",teclaVisor)}
+  vis={red:null,cuenta:x.produccion,codigo:x.codigo,tipo:x.tipo=="video"?"Video":"Carrusel",formato:x.tipo=="video"?"9:16":"4:5",fotos:x.tipo=="video"?[]:x.archivos.map(arc),met:{},texto:x.copy?.instagram||x.copy?.tiktok||"",fecha:x.creado,video:x.tipo=="video"?arc(x.archivos[0]):null};
+  visI=0;mostrarVisor()}
 function pintarBarra(){
   let b=$("#barra-l");if(!selL.size){b?.remove();return}
   if(!b){b=document.createElement("div");b.id="barra-l";b.className="barra-l";document.body.append(b)}
@@ -781,9 +829,10 @@ let SUG=null,cargandoSug=false,errSug="",SIDX=[],apagadosS=null,ajBorr=null,pasa
 const hoyF=()=>fechaLocal(new Date());
 const llaveS=(c,x)=>c+"|"+x.ruta+"|"+x.fecha;
 const desdeS=()=>SOP.desde&&SOP.desde>=hoyF()?SOP.desde:hoyF();   /* si la app quedó abierta de un día para otro, no pide un día que ya pasó */
-async function traerSug(){if(cargandoSug)return;cargandoSug=true;errSug="";if(tab=="hoy")hoy();
-  const q=new URLSearchParams({desde:desdeS(),dias:SOP.dias,excluir:SOP.excluir.join("|")});
-  try{SUG=await api("/api/sugerencias?"+q)}catch(e){errSug=e?.error||"No se pudo hablar con el Publicador."}finally{cargandoSug=false;if(tab=="hoy")hoy()}}
+/* «forzar» vuelve a leer Drive (solo «Armar de nuevo»); si falla, no se deja a la vista el plan de otra fecha */
+async function traerSug(forzar){if(cargandoSug)return;cargandoSug=true;errSug="";if(tab=="hoy")hoy();
+  const q=new URLSearchParams({desde:desdeS(),dias:SOP.dias,excluir:SOP.excluir.join("|")});if(forzar)q.set("forzar","1");
+  try{SUG=await api("/api/sugerencias?"+q)}catch(e){SUG=null;errSug=e?.error||"El Publicador no responde. Ciérralo y ábrelo de nuevo."}finally{cargandoSug=false;if(tab=="hoy")hoy()}}
 /* las cuentas prendidas (con lo que cambiaste en Ajustes aunque no esté guardado) */
 const actS=()=>new Set(SUG.destinos.filter(d=>d.activo).map(d=>d.clave));
 function elegidasS(){const out=[],act=actS();for(const d of SUG?.dias||[])for(const x of d.destinos)if(act.has(x.clave))for(const p of[...x.piezas,...(x.carrusel?[x.carrusel]:[])])if(!SOP.quitados.has(llaveS(x.clave,p)))out.push({ruta:p.ruta,clave:x.clave,fecha:p.fecha});return out}
@@ -791,81 +840,106 @@ function diaLargo(f){const d=new Date(f+"T12:00");return cap(d.toLocaleDateStrin
 function cambiarDesdeS(el){if(!el.value||el.value<hoyF()){toast("«Desde» tiene que ser hoy o un día que viene","mal");el.value=desdeS();return}SOP.desde=el.value;SOP.quitados.clear();traerSug()}
 function hoy(){
   if(!SUG&&!cargandoSug&&!errSug){traerSug();return}
-  if(SOP.ajustes&&$("#aj-n"))ajBorr=leerAj();   /* al repintar no se pierde lo que cambiaste en Ajustes */
-  const cab=`<div class="titulo-pag"><div><h1>Qué subir</h1><p>Mira lo que está listo en producción y lo que ya salió, y arma la mezcla de cada cuenta. Nunca pone dos videos del mismo cuerpo en una cuenta el mismo día.</p></div>
+  /* al repintar no se pierde lo que cambiaste en Ajustes (y si no cambiaste nada, no dice que hay cambios) */
+  if(SOP.ajustes&&$("#aj-n")){const l=leerAj();ajBorr=Object.keys(l).some(k=>String(l[k])!=String(SUG.ajustes[k]??(k=="entre_cuentas"?1:"")))?l:null}
+  const cab=`<div class="titulo-pag"><div><h1>Qué publicar</h1><p>Arma lo de cada cuenta con los videos terminados. Nunca pone dos videos del mismo cuerpo en una cuenta el mismo día.</p></div>
    <div class="acciones"><label class="bl-c">Desde <input type="date" value="${desdeS()}" min="${hoyF()}" onchange="cambiarDesdeS(this)"></label>
-    <select onchange="SOP.dias=+this.value;SOP.quitados.clear();traerSug()" aria-label="Cuántos días">${[[1,"Solo ese día"],[3,"3 días"],[7,"7 días"]].map(([n,t])=>`<option value="${n}" ${SOP.dias==n?"selected":""}>${t}</option>`).join("")}</select>
-    <button class="btn sec" onclick="tAjustes()" aria-expanded="${SOP.ajustes}">${ic("editar")}Ajustes</button>
-    <button class="btn sec" onclick="SOP.excluir=[];SOP.quitados.clear();traerSug()" ${cargandoSug?"disabled":""}>${ic("refrescar")}${cargandoSug?"Pensando…":"Volver a pensar"}</button></div></div>`;
-  if(!SUG){$("#barra-s")?.remove();$("#main").innerHTML=cab+(errSug?`<div class="caja vacio">${ic("alerta")}<h3>No se pudieron armar las sugerencias</h3><p>${esc(errSug)}</p><button class="btn prim" onclick="traerSug()">${ic("refrescar")}Reintentar</button></div>`
-    :`<div class="sug-rej">${Array.from({length:4},()=>`<div class="esqueleto" style="height:320px"></div>`).join("")}</div>`);return}
+    <select onchange="SOP.dias=+this.value;SOP.quitados.clear();traerSug()" aria-label="Cuántos días">${[[1,"1 día"],[3,"3 días"],[7,"7 días"]].map(([n,t])=>`<option value="${n}" ${SOP.dias==n?"selected":""}>${t}</option>`).join("")}</select>
+    <button class="btn sec" onclick="tAjustes()" aria-expanded="${SOP.ajustes}">${ic("configuracion")}Ajustes</button>
+    <button class="btn sec" onclick="SOP.excluir=[];SOP.quitados.clear();traerSug(true)" ${cargandoSug?"disabled":""} title="Vuelve a leer Drive y la cola, y arma todo otra vez">${cargandoSug?'<span class="rueda"></span>Armando…':ic("refrescar")+"Armar de nuevo"}</button></div></div>`;
+  if(!SUG){$("#barra-s")?.remove();$("#main").innerHTML=cab+(errSug?`<div class="caja vacio">${ic("alerta")}<h3>No se pudo armar Qué publicar</h3><p>${esc(errSug)}</p><button class="btn prim" onclick="traerSug()">${ic("refrescar")}Reintentar</button></div>`
+    :`<div class="sug-rej" aria-busy="true">${Array.from({length:2},()=>`<div class="caja sug-d"><div class="sug-cab"><div class="esqueleto" style="height:34px;width:240px"></div></div><div class="sug-tira">${Array.from({length:6},()=>`<div class="esqueleto" style="aspect-ratio:9/22"></div>`).join("")}</div></div>`).join("")}</div>`);return}
   const inv=SUG.inventario,act=actS();SIDX=[];
   let h=cab+(SOP.ajustes?ajustesS():"")+`<div class="res-s">
-    <span class="chip"><b>${inv.videos}</b>videos listos</span><span class="chip"><b>${inv.cuerpos}</b>cuerpos distintos</span>
-    <span class="chip"><b>${inv.sin_salir}</b>sin salir en ninguna cuenta</span>${inv.carruseles?`<span class="chip"><b>${inv.carruseles}</b>carruseles</span>`:""}
-    <span class="chip"><b>${act.size}</b>${act.size==1?"cuenta":"cuentas"} · ${SUG.por_dia} por cuenta al día</span></div>`;
+    <span class="chip"><b>${inv.videos}</b>${inv.videos==1?"video terminado":"videos terminados"}</span><span class="chip"><b>${inv.cuerpos}</b>${inv.cuerpos==1?"cuerpo":"cuerpos distintos"}</span>
+    <span class="chip" title="Videos que todavía no están en la cola de ninguna cuenta"><b>${inv.sin_salir}</b>${inv.sin_salir==1?"nuevo":"nuevos"} en Antena</span>${inv.carruseles?`<span class="chip"><b>${inv.carruseles}</b>${inv.carruseles==1?"carrusel":"carruseles"}</span>`:""}
+    <span class="chip"><b>${act.size}</b>${act.size==1?"cuenta":"cuentas"} · ${SUG.por_dia} ${SUG.por_dia==1?"video":"videos"} al día por cuenta</span></div>`;
   if(SUG.avisos.length)h+=`<ul class="avisos" style="margin-bottom:14px;font-size:13px">${SUG.avisos.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`;
-  if(!inv.videos)h+=`<div class="caja vacio">${ic("carpeta")}<h3>No hay videos listos</h3><p>Cuando la Sala deje videos en V.FINALES, aquí salen las sugerencias.</p></div>`;
+  if(!inv.videos)h+=`<div class="caja vacio">${ic("carpeta")}<h3>No hay videos terminados</h3><p>Cuando la Sala de edición deje videos en V.FINALES, aquí aparece qué publicar en cada cuenta.</p></div>`;
   for(const d of SUG.dias){
     const ds=d.destinos.filter(x=>act.has(x.clave)),sug=ds.reduce((a,x)=>a+x.piezas.length,0),fal=ds.reduce((a,x)=>a+x.faltan,0);
     const sinPlan=SUG.destinos.filter(z=>z.activo&&!d.destinos.some(y=>y.clave==z.clave));
-    h+=`<div class="sec-t"><h2>${esc(diaLargo(d.dia))}</h2><span class="etq">${sug} sugeridos${fal?` · faltan ${fal} para llegar al cupo`:""}</span></div><div class="sug-rej">`;
+    h+=`<div class="sec-t"><h2>${esc(diaLargo(d.dia))}</h2><span class="etq">${sug} ${sug==1?"pieza":"piezas"}${fal?` · faltan ${fal}`:""}</span></div><div class="sug-rej" ${cargandoSug?'aria-busy="true"':""}>`;
     for(const x of ds){
-      const filas=[...x.piezas,...(x.carrusel?[x.carrusel]:[])],n=x.piezas.length+x.ya.length,cupo=x.cupo??SUG.por_dia;
-      h+=`<div class="caja sug-d"><div class="sug-cab">${redIc(x.red)}<div style="flex:1"><b>${esc(x.nombre)}</b><span class="suave">${n} de ${cupo} videos${x.por_hora?` · quedan ${x.horas_libres} ${x.horas_libres==1?"horario":"horarios"} ${d.dia==hoyF()?"hoy":"ese día"}`:""}${x.ya.length?` · ${x.ya.length} ya en la cola`:""}${x.carrusel?" · 1 carrusel":""}</span></div></div>
-       ${filas.map(p=>filaS(x,p)).join("")}
-       ${x.ya.length?`<div class="sug-pie">Ya en la cola: ${x.ya.map(y=>`${y.fecha.slice(11,16)} ${esc(y.codigo)}`).join(" · ")}</div>`:""}
-       ${x.faltan?`<div class="sug-pie falta">Faltan ${x.faltan}: ${x.por_que_faltan=="videos"?"ya no quedan videos sin subir a esta cuenta.":x.por_que_faltan=="cuerpos"?"los videos que quedan son de cuerpos que ya van ese día en esta cuenta.":x.por_que_faltan=="cuentas"?`los videos que quedan ya salen en otra cuenta de ${REDES[x.red][1]} a menos de ${x.entre_cuentas} ${x.entre_cuentas==1?"día":"días"}.`:"no quedan videos de otros cuerpos para esta cuenta."}</div>`:""}
-       ${!filas.length&&!x.ya.length&&!x.faltan?`<div class="sug-pie">Nada para este día.</div>`:""}</div>`;
+      const filas=[...x.piezas,...(x.carrusel?[x.carrusel]:[])],n=x.piezas.length+x.ya.length,meta=Math.max(SUG.por_dia,n);
+      const barra=Array.from({length:meta},(_,k)=>`<i class="${k<x.ya.length?"ok":k<n?"sug":""}"></i>`).join("");
+      h+=`<section class="caja sug-d" aria-label="${esc(x.nombre)}"><div class="sug-cab">${redIc(x.red)}<div class="nom"><b title="${esc(x.nombre)}">${esc(x.nombre)}</b>
+        <span class="sug-cupo"><span class="sug-barra" aria-hidden="true">${barra}</span><span><b>${n}</b> de ${SUG.por_dia} ${SUG.por_dia==1?"video":"videos"}${x.ya.length?` · ${x.ya.length} en la cola`:""}${x.carrusel?" · 1 carrusel":""}${x.por_hora?` · ${d.dia==hoyF()?"hoy":"ese día"} solo ${x.horas_libres==1?"queda 1 horario":`quedan ${x.horas_libres} horarios`}`:""}</span></span></div></div>
+       ${filas.length||x.ya.length?`<div class="sug-tira">${[...x.ya.map(y=>[y.hora||y.fecha.slice(11,16),fichaCola(x,y)]),...filas.map(p=>[p.hora,filaS(x,p)])]
+          .sort((a,b)=>a[0].localeCompare(b[0])).map(f=>f[1]).join("")}</div>`:""}
+       ${x.faltan?`<div class="sug-pie falta">Faltan ${x.faltan}: ${x.por_que_faltan=="videos"?"ya se usaron todos los videos terminados en esta cuenta.":x.por_que_faltan=="cuentas"?`los que quedan van a otra cuenta de ${REDES[x.red][1]} con menos de ${x.entre_cuentas} ${x.entre_cuentas==1?"día":"días"} de diferencia. Puedes cambiarlo en Ajustes.`:"los que quedan repiten un cuerpo que ya va ese día."}</div>`:""}
+       ${!filas.length&&!x.ya.length&&!x.faltan?`<div class="sug-pie">Nada para este día.</div>`:""}</section>`;
     }
-    if(sinPlan.length)h+=`<div class="caja sug-d"><div class="sug-pie">Guarda los ajustes para ver qué subir a ${sinPlan.map(z=>esc(z.nombre)).join(", ")}.</div></div>`;
+    if(sinPlan.length)h+=`<div class="caja sug-d"><div class="sug-pie">Guarda los ajustes para ver qué publicar en ${sinPlan.map(z=>esc(z.nombre)).join(", ")}.</div></div>`;
     h+=`</div>`;
   }
-  $("#main").innerHTML=h+`<div class="espacio-barra" style="height:110px"></div>`;
+  $("#main").innerHTML=h+`<div class="esp-barra"></div>`;
   barraS();
 }
-function filaS(x,p){const i=SIDX.push({x,p})-1,off=SOP.quitados.has(llaveS(x.clave,p)),carr=p.tipo=="carrusel";
+/* lo que ya está en la cola ese día: la misma ficha, sin casilla, para ver el día entero de la cuenta */
+function fichaCola(x,y){const src=y.portada?arc(y.portada):y.mini?"/mini?rel="+encodeURIComponent(y.mini):null,local=y.archivos.length&&y.bajado!==false&&!src;
+  const foto=src?`<img src="${src}" alt="" loading="lazy" onerror="this.style.opacity=.15">`:local?`<video src="${arc(y.archivos[0])}#t=1" muted preload="metadata"></video>`:`<span class="en-drive">${ic("cola")}</span>`;
+  const est={publicado:"Publicada",simulado:"Simulada",error:"Con error",publicando:"Publicando"}[y.estado]||"En la cola";
+  return`<article class="sug-t ya"><div class="sug-media"${local?` data-v="${arc(y.archivos[0])}"`:""}>${foto}
+   ${y.id?`<button class="sug-ver" onclick="abrirEditor('${jq(y.id)}')" aria-label="Abrir ${esc(y.codigo)} en la cola">${ic("editar")}</button>`:""}
+   <span class="sug-hora">${y.hora||y.fecha.slice(11,16)}</span><span class="sug-sello ${y.estado=="error"?"ojo":"cola"}">${est}</span></div>
+   <div class="sug-info"><span class="sug-cod" title="${esc(y.codigo)}">${esc(y.codigo)}</span></div></article>`}
+/* una ficha por pieza: la imagen grande con la hora encima; al pasar el mouse el video se mueve sin sonido */
+function filaS(x,p){const i=SIDX.push({x,p})-1,off=SOP.quitados.has(llaveS(x.clave,p)),carr=p.tipo=="carrusel",local=!carr&&p.bajado!==false,nuevo=p.nuevo??/^Nuevo/.test(p.motivo||"");
   /* los videos que siguen en Drive no tienen archivo en la PC: la miniatura de Drive o una caja, nunca un video roto */
-  const foto=s=>`<img class="mini-img" src="${s}" alt="" loading="lazy" onerror="this.style.opacity=.15">`;
-  const img=p.portada?foto(arc(p.portada)):p.mini?foto("/mini?rel="+encodeURIComponent(p.mini)):carr?foto(arc(p.archivos[0]))
-   :p.bajado!==false?`<video class="mini-img" src="${arc(p.archivos[0])}#t=1" muted preload="metadata"></video>`
-   :`<span class="mini-img mini-drive" title="Está en Drive: se baja al verlo o al publicarlo">${ic("carpeta")}</span>`;
-  return`<div class="sug-f ${off?"off":""}"><input type="checkbox" ${off?"":"checked"} onchange="tS(${i})" aria-label="Subir ${esc(p.codigo)} a ${esc(x.nombre)}">
-   <span class="hora">${p.hora}</span>${img}
-   <div class="c"><b title="${esc(p.codigo)}">${esc(p.codigo)}</b>
-    ${p.gancho?`<p style="color:var(--texto)" title="Primera línea del copy">${esc(p.gancho)}</p>`:""}
-    <p class="${p.pronto?"ojo":""}">${carr?`Carrusel · ${p.archivos.length} láminas`:esc(p.motivo)}</p>
-    ${carr?"":`<div class="fila" style="gap:4px;margin-top:3px">${p.hook?`<span class="tag">${esc(p.hook)}</span>`:""}<span class="tag" title="Cuerpo">${esc(p.cuerpo.split(" · ").pop())}</span><span class="tag">${esc(p.produccion)}</span></div>`}</div>
-   <div class="sug-acc"><button class="btn fant" onclick="verS(${i})" title="Ver" aria-label="Ver ${esc(p.codigo)}">${carr?ic("ojo"):"▶"}</button>
-    <button class="btn fant" onclick="cambiarS(${i})" title="Cambiar por otro (solo en esta cuenta)" aria-label="Cambiar ${esc(p.codigo)} por otro en ${esc(x.nombre)}">${ic("refrescar")}</button>
-    ${carr?"":`<button class="btn fant" onclick="yaSalioS(${i})" title="Ya lo subí a mano a esta cuenta: no sugerirlo más aquí" aria-label="Marcar ${esc(p.codigo)} como ya subido a ${esc(x.nombre)}">${ic("check")}</button>`}</div></div>`}
-function tS(i){const{x,p}=SIDX[i],k=llaveS(x.clave,p);SOP.quitados.has(k)?SOP.quitados.delete(k):SOP.quitados.add(k);hoy()}
+  const src=p.portada?arc(p.portada):p.mini?"/mini?rel="+encodeURIComponent(p.mini):carr?arc(p.archivos[0]):null;
+  const foto=src?`<img src="${src}" alt="" loading="lazy" onerror="this.style.opacity=.15">`:local?`<video src="${arc(p.archivos[0])}#t=1" muted preload="metadata"></video>`
+   :`<span class="en-drive">${ic("carpeta")}<span>Está en Drive</span><small>Se baja al verlo</small></span>`;
+  const sello=carr?`<span class="sug-sello">${p.archivos.length} ${p.archivos.length==1?"lámina":"láminas"}</span>`:p.pronto?`<span class="sug-sello ojo">Cuerpo reciente</span>`:nuevo?`<span class="sug-sello nuevo">Nuevo</span>`:"";
+  const mot=carr?"Carrusel":nuevo&&!p.pronto?"":p.motivo;
+  return`<article class="sug-t ${off?"off":""} ${carr?"carr":""}" data-i="${i}">
+   <div class="sug-media"${local?` data-v="${arc(p.archivos[0])}"`:""}>${foto}
+    <button class="sug-ver" onclick="verS(${i})" aria-label="Ver ${esc(p.codigo)} en grande">${ic(carr?"ojo":"jugar")}</button>
+    <span class="sug-hora">${p.hora}</span>${sello}<span class="sug-fuera">No va</span>
+    <label class="sug-sel" title="${off?"No va a la cola: márcala para que vaya":"Va a la cola: desmárcala si no va"}"><input type="checkbox" ${off?"":"checked"} onchange="tS(${i})" aria-label="Pasar ${esc(p.codigo)} a la cola de ${esc(x.nombre)} a las ${p.hora}"><span>${ic("check")}</span></label></div>
+   <div class="sug-info">${p.gancho?`<p class="sug-gancho" title="Primera línea del copy: ${esc(p.gancho)}">${esc(p.gancho)}</p>`:""}
+    <span class="sug-cod" title="${esc(p.codigo)}${p.produccion?` · ${esc(p.produccion)}`:""}">${esc(p.codigo)}</span>
+    ${mot?`<p class="sug-mot ${p.pronto?"ojo":""}" title="${esc(mot)}">${esc(mot)}</p>`:""}</div>
+   <div class="sug-acc"><button class="btn sec peq" onclick="cambiarS(${i})" title="Cambiar por otro video (solo en esta cuenta)" aria-label="Cambiar ${esc(p.codigo)} por otro en ${esc(x.nombre)}">${ic("refrescar")}Cambiar</button>
+    <details class="sug-menu"><summary class="btn fant peq" aria-label="Más opciones de ${esc(p.codigo)}" title="Más opciones">⋯</summary><div class="sug-menu-l">
+     <button onclick="verS(${i})">${ic("ojo")}Ver en grande</button>${carr?"":`<button onclick="yaSalioS(${i})">${ic("check")}Ya lo publiqué a mano aquí</button>`}</div></details></div></article>`}
+function tS(i){const{x,p}=SIDX[i],k=llaveS(x.clave,p),off=!SOP.quitados.delete(k);if(off)SOP.quitados.add(k);
+  const t=document.querySelector(`.sug-t[data-i="${i}"]`);t?.classList.toggle("off",off);
+  const l=t?.querySelector(".sug-sel");if(l)l.title=off?"No va a la cola: márcala para que vaya":"Va a la cola: desmárcala si no va";barraS()}
+/* vista previa al pasar el mouse: el video se mueve sin sonido; se crea solo al pasar, así la página no carga 80 videos */
+let vivoS=null,vivoT=0;
+function soltarVivo(){clearTimeout(vivoT);if(vivoS){vivoS.classList.remove("vivo");vivoS.querySelector(".sug-vivo")?.remove();vivoS=null}}
+document.addEventListener("pointerover",e=>{const m=e.target.closest?.(".sug-media[data-v]");if(m==vivoS)return;soltarVivo();
+  if(!m||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  vivoT=setTimeout(()=>{vivoS=m;const v=document.createElement("video");Object.assign(v,{src:m.dataset.v,muted:true,loop:true,playsInline:true,className:"sug-vivo"});
+    v.addEventListener("playing",()=>m.classList.add("vivo"),{once:true});m.prepend(v);v.play().catch(()=>{})},350)});
+document.addEventListener("click",e=>{document.querySelectorAll("details.sug-menu[open]").forEach(d=>{if(!d.contains(e.target)||e.target.closest(".sug-menu-l button"))d.open=false})});
 /* cambia solo esa fila: toma otro video de la reserva de esa cuenta (que no vaya ya y no repita cuerpo ese día) */
 function cambiarS(i){const{x,p}=SIDX[i];
-  if(p.tipo=="carrusel"||!x.reserva){SOP.excluir.push(p.ruta);traerSug();return}
+  if(p.tipo=="carrusel"||!x.reserva){SOP.excluir.push(x.clave+">"+p.ruta);traerSug();return}
   const usadas=new Set(SUG.dias.flatMap(d=>d.destinos.filter(y=>y.clave==x.clave).flatMap(y=>y.piezas.map(z=>z.ruta))));
   const cuerpos=new Set(x.piezas.filter(z=>z!==p).map(z=>z.cuerpo)),k=x.reserva.findIndex(z=>!usadas.has(z.ruta)&&!cuerpos.has(z.cuerpo));
-  if(k<0){toast(`No hay otro video para ${x.nombre} ese día: los que quedan ya van o son de cuerpos que ya van ese día.`,"mal");return}
+  if(k<0){toast(`No hay otro video para ${x.nombre} ese día: los que quedan ya van o repiten un cuerpo de ese día.`,"mal");return}
   const n={...x.reserva.splice(k,1)[0],hora:p.hora,fecha:p.fecha};x.reserva.push({...p,hora:"",fecha:""});
   SOP.quitados.delete(llaveS(x.clave,p));x.piezas[x.piezas.indexOf(p)]=n;hoy()}
-async function yaSalioS(i){const{x,p}=SIDX[i];if(!await preguntar("¿Ya subiste este video?",`${p.codigo} ya no se va a sugerir para ${x.nombre}. En las demás cuentas puede seguir saliendo.`,"Sí, ya salió","prim"))return;
-  await api("/api/sugerencias/ya_salio",{ruta:p.archivos[0],clave:x.clave});toast(`Listo, no se sugiere más en ${x.nombre}`,"ok");traerSug()}
+async function yaSalioS(i){const{x,p}=SIDX[i];if(!await preguntar(`¿Ya publicaste ${p.codigo} en ${x.nombre}?`,`No se volverá a sugerir en ${x.nombre}. En las demás cuentas puede seguir apareciendo.`,"Sí, ya está publicado","prim"))return;
+  await api("/api/sugerencias/ya_salio",{ruta:p.archivos[0],clave:x.clave});toast(`No se volverá a sugerir en ${x.nombre}`,"ok");traerSug()}
 async function verS(i){const p=SIDX[i].p,v=p.tipo!="carrusel";
   if(v&&p.bajado===false){toast("Bajando de Drive…");try{await api("/api/listos/bajar",{ruta:p.ruta});p.bajado=true}catch(e){return}}
   vis={red:SIDX[i].x.red,cuenta:SIDX[i].x.nombre,codigo:p.codigo,tipo:v?"Video":"Carrusel",formato:v?"9:16":"4:5",fotos:v?[]:p.archivos.map(arc),met:{},
     texto:v?(p.gancho?`${p.gancho}\n\n(Es la primera línea del copy. El copy entero se escribe al pasarlo a la cola.)`:"El copy se escribe al pasarlo a la cola."):"",fecha:p.fecha,video:v?arc(p.archivos[0]):null};
-  visI=0;pintarVisor();$("#visor").classList.add("on");document.addEventListener("keydown",teclaVisor)}
+  visI=0;mostrarVisor()}
 const leerAj=()=>({por_dia:+$("#aj-n").value,desde:$("#aj-d").value,hasta:$("#aj-h").value,aire_cuerpo:+$("#aj-a").value,entre_cuentas:+$("#aj-e").value});
 function ajustesS(){const a={...SUG.ajustes,...(ajBorr||{})};
-  return`<div class="caja" data-borrador><h3>Ajustes de las sugerencias</h3>
+  return`<div class="caja" data-borrador><h3>Ajustes de Qué publicar</h3>
    <div class="aj-s"><label class="campo">Videos por cuenta al día<select id="aj-n">${Array.from({length:15},(_,k)=>k+1).map(n=>`<option ${a.por_dia==n?"selected":""}>${n}</option>`).join("")}</select></label>
-    <label class="campo">Primer video<input id="aj-d" type="time" value="${esc(a.desde)}" required></label>
-    <label class="campo">Último video<input id="aj-h" type="time" value="${esc(a.hasta)}" required></label>
-    <label class="campo">Días antes de repetir un cuerpo en la misma cuenta<select id="aj-a">${[0,1,2,3,4,5,7].map(n=>`<option ${a.aire_cuerpo==n?"selected":""}>${n}</option>`).join("")}</select></label>
-    <label class="campo">Días entre cuentas para el mismo video<select id="aj-e">${[0,1,2,3,4,5,7].map(n=>`<option value="${n}" ${(a.entre_cuentas??1)==n?"selected":""}>${n==0?"0 · puede salir el mismo día":n==1?"1 · nunca el mismo día":n+" días"}</option>`).join("")}</select></label></div>
+    <label class="campo">Hora del primer video<input id="aj-d" type="time" value="${esc(a.desde)}" required></label>
+    <label class="campo">Hora del último video<input id="aj-h" type="time" value="${esc(a.hasta)}" required></label>
+    <label class="campo">Días sin repetir cuerpo en una cuenta<select id="aj-a">${[0,1,2,3,4,5,7].map(n=>`<option ${a.aire_cuerpo==n?"selected":""}>${n}</option>`).join("")}</select></label>
+    <label class="campo">Días entre cuentas para el mismo video<select id="aj-e">${[0,1,2,3,4,5,7].map(n=>`<option value="${n}" ${(a.entre_cuentas??1)==n?"selected":""}>${n==0?"0 (el mismo día)":n==1?"1 día":n+" días"}</option>`).join("")}</select></label></div>
    <p class="suave" style="margin:8px 0 0">Si tienes varias cuentas en una red (tres de TikTok, dos de YouTube…), el mismo video espera estos días antes de salir en la otra cuenta. Cada cuenta, además, sale unos minutos corrida de las demás.</p>
-   <div class="bl-t" style="margin:14px 0 6px">Cuentas que reciben sugerencias</div>
-   <div class="fila" style="gap:6px">${SUG.destinos.map(d=>`<button class="ch ${d.activo?"on":""}" aria-pressed="${d.activo}" onclick="tDest('${esc(d.clave)}')">${redIc(d.red,d.listo?"":"apagada")}${esc(d.nombre)}</button>`).join("")}</div>
+   <div class="bl-t" style="margin:14px 0 6px">Cuentas en Qué publicar</div>
+   <div class="fila" style="gap:6px">${SUG.destinos.map(d=>`<button class="ch ${d.activo?"on":""}" aria-pressed="${d.activo}" onclick="tDest('${jq(d.clave)}')">${redIc(d.red,d.listo?"":"apagada")}${esc(d.nombre)}</button>`).join("")}</div>
    <p class="suave" style="margin:10px 0 0">¿Faltan cuentas? Agrega las otras cuentas de TikTok y canales de YouTube en <a href="#" onclick="ir('conexiones');return false">Conexiones</a>. Cada una aparece aquí sola.</p>
    <div class="fila" style="margin-top:12px"><button class="btn prim" onclick="guardarAj()">Guardar ajustes</button>${ajBorr||apagadosS?`<span class="suave">Hay cambios sin guardar.</span>`:""}</div></div>`}
 function tAjustes(){SOP.ajustes=!SOP.ajustes;if(!SOP.ajustes){ajBorr=apagadosS=null;sucio=false;SUG?.destinos.forEach(d=>d.activo=!(SUG.ajustes.apagados||[]).includes(d.clave))}hoy()}
@@ -873,18 +947,18 @@ function tDest(k){apagadosS=apagadosS||[...(SUG.ajustes.apagados||[])];const i=a
   SUG.destinos.forEach(d=>d.activo=!apagadosS.includes(d.clave));sucio=true;hoy()}
 async function guardarAj(){const a=leerAj();
   if(!a.desde||!a.hasta){toast("Pon la hora del primer y del último video","mal");(a.desde?$("#aj-h"):$("#aj-d")).focus();return}
-  if(a.desde>=a.hasta){toast("«Primer video» tiene que ser más temprano que «Último video»","mal");$("#aj-d").focus();return}
+  if(a.desde>=a.hasta){toast("La hora del primer video tiene que ser antes que la del último","mal");$("#aj-d").focus();return}
   await guardarCfg({sugeridor:{...a,apagados:apagadosS||SUG.ajustes.apagados||[]}});
   apagadosS=ajBorr=null;sucio=false;SOP.quitados.clear();traerSug()}
 function barraS(){
   const el=elegidasS();let b=$("#barra-s");if(!el.length){b?.remove();return}
   if(!b){b=document.createElement("div");b.id="barra-s";b.className="barra-l";document.body.append(b)}
   const cuentas=new Set(el.map(x=>x.clave)).size;
-  b.innerHTML=`<div class="barra-l-in"><div class="bl-g"><b>${el.length} ${el.length==1?"pieza":"piezas"} para ${cuentas} ${cuentas==1?"cuenta":"cuentas"}</b><span class="suave">${pasandoS?"Escribiendo los copies de cada cuenta: puede tardar un poco.":"Desmarca lo que no quieras."}</span></div>
+  b.innerHTML=`<div class="barra-l-in"><div class="bl-g"><b>${el.length} ${el.length==1?"pieza":"piezas"} para ${cuentas} ${cuentas==1?"cuenta":"cuentas"}</b><span class="suave">${pasandoS?"Escribiendo los copies de cada cuenta: puede tardar un poco.":"Quita la marca a lo que no va."}</span></div>
    <div class="bl-g bl-fin"><label class="interruptor"><input type="checkbox" ${SOP.aprobar?"checked":""} ${pasandoS?"disabled":""} onchange="SOP.aprobar=this.checked"><span class="riel"></span>Aprobar de una vez</label>
-   <button class="btn acento" onclick="aceptarS()" ${pasandoS?"disabled":""}>${ic("enviar")}${pasandoS?"Pasando…":`Pasar ${el.length} a la cola`}</button></div></div>`}
+   <button class="btn acento" onclick="aceptarS()" ${pasandoS?"disabled":""}>${ic("enviar")}${pasandoS?"Escribiendo copies…":`Pasar ${el.length} a la cola`}</button></div></div>`}
 async function aceptarS(){if(pasandoS)return;const el=elegidasS();if(!el.length)return;
-  if(SOP.aprobar&&!E.config.simular&&!await preguntar(`¿Aprobar ${el.length} piezas?`,"La simulación está apagada: saldrán de verdad, cada una a su hora.","Pasar y aprobar","acento"))return;
+  if(SOP.aprobar&&!E.config.simular&&!await preguntar(`¿Pasar y aprobar ${el.length} ${el.length==1?"pieza":"piezas"}?`,"La simulación está apagada: se publican de verdad, cada una a su hora.","Pasar y aprobar","acento"))return;
   pasandoS=true;barraS();let r=null;
   try{r=await api("/api/sugerencias/aceptar",{items:el,aprobar:SOP.aprobar})}catch(e){}finally{pasandoS=false}
   if(!r){barraS();return}
@@ -1159,7 +1233,7 @@ async function preparacion(recargar){
     <div class="fila"><button class="btn prim" onclick="guardarLlaves('${r.red}')">${ic("check")}Guardar llaves</button>
       ${r.llaves.some(l=>l.tiene)?`<button class="btn fant chico" onclick="borrarLlaves('${r.red}')">${ic("basura")}Borrar las llaves de ${esc(r.nombre)}</button>`:""}</div>
     <div><div class="suave" style="font-weight:600;margin-bottom:4px">Dirección de vuelta</div>
-      <div class="prep-vuelta"><code>${esc(r.vuelta)}</code><button class="btn sec chico" onclick="copiarTxt('${esc(r.vuelta)}',this)">Copiar</button></div></div>
+      <div class="prep-vuelta"><code>${esc(r.vuelta)}</code><button class="btn sec chico" onclick="copiarTxt('${jq(r.vuelta)}',this)">Copiar</button></div></div>
     <div class="fila" style="align-items:flex-end"><label class="campo" style="flex:1">¿En qué va la revisión de ${esc(r.nombre)}?
       <select data-libre onchange="revision('${r.red}',this.value)">${Object.entries(REV_TXT).map(([k,v])=>`<option value="${k}" ${r.revision_estado==k?"selected":""}>${v}</option>`).join("")}</select></label></div>
     <p class="suave" style="margin:0">${esc(r.revision_estado=="aprobada"?"Aprobada: cualquier persona puede conectar sus cuentas.":r.prueba)}</p>
@@ -1208,10 +1282,10 @@ function conexiones(){
     return `<div class="caja red-caja"><div class="cab">${redIc(k,"grande "+(x.listo?"":"apagada"))}<div style="flex:1"><h3>${REDES[k][1]}</h3><span class="est ${x.listo?"listo":"falta"}">${x.listo?"Conectado":"Falta conectar"}</span></div></div>
      ${x.falta.length?`<div><div class="suave" style="font-weight:600;margin-bottom:4px">Qué falta</div><ul class="falta-l">${faltaTxt(x.falta).map(f=>`<li>${f}</li>`).join("")}</ul></div>`:""}
      ${cs?.length?`<div class="cuentas">${cs.map(a=>`<div class="cuenta-f"><span class="nom" title="${esc(a.nombre)}">${esc(a.nombre)}</span>${a.defecto?'<span class="est simulado">Por defecto</span>':`<button class="btn fant chico" onclick="api('/api/${k}/defecto',{id:'${esc(a.id)}'}).then(cargar)" title="Usar por defecto" aria-label="Usar ${esc(a.nombre)} por defecto">${ic("estrella")}</button>`}
-       <button class="btn fant chico" onclick="quitarCuenta('${k}','${esc(a.id)}','${esc(a.nombre).replace(/'/g,"")}')" aria-label="Quitar ${esc(a.nombre)}" title="Quitar">${ic("x")}</button></div>`).join("")}</div>`:""}
+       <button class="btn fant chico" onclick="quitarCuenta('${k}','${jq(a.id)}','${jq(a.nombre)}')" aria-label="Quitar ${esc(a.nombre)}" title="Quitar">${ic("x")}</button></div>`).join("")}</div>`:""}
      <p class="suave" style="margin:0">${AYUDA[k]}</p>
      ${oauth?`<div><a class="btn ${cs?.length?"sec":"prim"}" href="${url}" target="_blank" rel="noopener" onclick="toast('Se abrió tu navegador: entra con la cuenta que quieres sumar y vuelve aquí. Aparece sola.')">${ic(cs?.length?"mas":"conexiones")}${cs?.length?agregar:conectar}</a></div>`:""}</div>`};
-  $("#main").innerHTML=`<div class="titulo-pag"><div><h1>Conexiones y ajustes</h1><p>Conecta las redes una vez. Las claves se guardan en tu PC, en <code>credenciales.env</code>.</p></div></div>
+  $("#main").innerHTML=`<div class="titulo-pag"><div><h1>Conexiones</h1><p>Conecta las redes una vez. Las llaves se guardan solo en esta PC.</p></div></div>
   <div class="caja" style="border-color:${cfg.simular?"var(--borde)":"var(--naranja-fuerte)"}"><div class="fila"><label class="interruptor"><input type="checkbox" ${cfg.simular?"checked":""} onchange="simular(this.checked)"><span class="riel"></span>Modo simulación</label>
    <span class="suave">${cfg.simular?"Prendido: anota lo que haría, pero no sube nada ni gasta.":"<b style='color:var(--naranja-fuerte)'>Apagado: lo aprobado se sube de verdad a su hora.</b>"}</span></div></div>
   <div class="conex">${Object.keys(REDES).map(caja).join("")}</div>
@@ -1234,7 +1308,7 @@ function conexiones(){
 }
 async function quitarCuenta(k,id,n){if(await preguntar(`¿Quitar ${n}?`,`El publicador deja de usar ${k=="youtube"?"este canal":"esta "+QUE_CUENTA[k].toLowerCase()}. Las piezas que ya salieron no se tocan.`,"Quitar","peligro")){await api(`/api/${k}/quitar`,{id});cargar()}}
 async function simular(on){
-  if(!on&&!await preguntar("¿Apagar la simulación?","Desde ahora, lo aprobado se sube DE VERDAD a las redes a su hora.","Apagar simulación","acento")){pintar();return}
+  if(!on&&!await preguntar("¿Apagar la simulación?","Desde ahora, lo aprobado se publica de verdad en las redes, cada pieza a su hora.","Apagar simulación","peligro")){pintar();return}
   await guardarCfg({simular:on})}
 async function guardarCfg(c){await api("/api/config",c);sucio=false;toast("Guardado","ok");cargar()}
 async function apagar(){if(await preguntar("¿Apagar el publicador?","Lo programado no saldrá hasta que lo vuelvas a abrir.","Apagar","peligro")){await api("/api/adios",{});document.body.innerHTML='<div class="vacio" style="padding-top:20vh"><h3>Publicador apagado</h3><p>Ya puedes cerrar la ventana.</p></div>'}}

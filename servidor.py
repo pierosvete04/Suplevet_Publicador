@@ -188,7 +188,7 @@ class Manejador(BaseHTTPRequestHandler):
                 return self._json(produccion.listos(q.get("forzar") == "1"))
             if u.path == "/api/sugerencias":
                 return self._json(sugeridor.planear(q.get("desde") or None, int(q.get("dias") or 1),
-                                                    [x for x in q.get("excluir", "").split("|") if x]))
+                                                    [x for x in q.get("excluir", "").split("|") if x], q.get("forzar") == "1"))
             if u.path == "/api/publicadas":
                 return self._json(publicadas.todas(q.get("forzar") == "1"))
             if u.path == "/img":
@@ -272,6 +272,13 @@ class Manejador(BaseHTTPRequestHandler):
                               "atraso_max_min"}
                 if isinstance(d.get("sugeridor"), dict):
                     d["sugeridor"] = sugeridor.validar_ajustes(d["sugeridor"])
+                # horas siempre «08:00»: la cola compara horas como texto y «8:00» quedaría después de «12:00»
+                if "horarios_video" in d:
+                    d["horarios_video"] = sorted({sugeridor.hora_valida(h, "Horarios de videos") for h in d["horarios_video"] or []})
+                    if not d["horarios_video"]:
+                        raise ValueError("Pon al menos un horario para los videos")
+                if "horario_carrusel" in d:
+                    d["horario_carrusel"] = sugeridor.hora_valida(d["horario_carrusel"], "Horario del carrusel")
                 nucleo.guardar_config({k: v for k, v in d.items() if k in permitidas})
                 if "simular" in d:
                     nucleo.anotar("Modo simulación " + ("PRENDIDO" if d["simular"] else "APAGADO: ahora sí sale a redes"))

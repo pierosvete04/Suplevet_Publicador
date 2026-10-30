@@ -483,6 +483,8 @@ def cambiar(pid, cambios):
                 # reintentar: solo lo que falló o quedó en duda; lo que ya salió o está subiendo no se toca
                 if r.get("estado") == "pendiente" and p["redes"][red].get("estado") in REINTENTABLES:
                     p["redes"][red].update(estado="pendiente", error=None)
+        if p.get("aprobado") and "fecha" in cambios and not re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", p.get("fecha") or ""):
+            raise ValueError("Una pieza aprobada necesita día y hora: ponlos o quita la aprobación")   # si no, nunca saldría
         if cambios.get("aprobado"):
             if not any(r.get("activa") for r in p["redes"].values()):
                 raise ValueError("No se puede aprobar: prende al menos una red para esta pieza")
