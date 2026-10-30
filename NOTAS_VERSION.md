@@ -1,3 +1,20 @@
+## 1.11.0 · Nada sale dos veces ni cuando no debe
+
+- **Nunca se publica dos veces.** Si Instagram, Facebook o YouTube publican y luego falla algo menor (pedir el enlace), la pieza queda «Publicada». Si la conexión se corta justo al publicar, queda en «Revisar» (mira en la red antes de reintentar), no en «Error».
+- **El reloj vuelve a mirar cada pieza justo antes de subirla**: si la desaprobaste o la pasaste a otro día mientras esperaba su turno, ya no sale.
+- **Una sola revisión para aprobar**, la misma en la Cola, en Hoy y en Subir contenido, y otra vez justo antes de subir: copy vacío, título de YouTube vacío o de más de 100 letras, palabras prohibidas, límites de cada red (incluido el de bytes de YouTube y los 30 hashtags de Instagram) y quién puede ver el video en TikTok directo. Si cambias algo de una pieza aprobada y ya no podría salir, te lo dice.
+- Las palabras prohibidas ya no frenan de más («cura» no frena «curación»).
+- **El editor no deja cambiar una red que ya salió o se está subiendo**, y «Escribir otro copy» solo reescribe las redes pendientes.
+- **«Reintentar» guarda antes lo que corregiste.**
+- **El editor se actualiza solo** mientras está abierto (salvo cuando estás escribiendo): ves si salió, el error y el botón para reintentar.
+- **Nada se programa en el pasado**: Hoy vuelve a armar el plan si tiene más de 30 minutos y no acepta horas que ya pasaron; Subir contenido no acepta un «Desde» viejo y, si es hoy, usa solo las horas que quedan; el editor no deja elegir una hora pasada.
+- **Lo simulado puede salir de verdad**: con la simulación apagada, el editor muestra «Publicar de verdad en …».
+- **La simulación ya no finge**: si la cuenta ya no está conectada o falta algo para publicar, da error igual que en real.
+- **La cuenta queda fija al pasar a la cola**: cambiar la cuenta principal después ya no mueve lo que ya estaba en la cola.
+- **Métricas que no se pierden**: si una red falla o aún no da números (TikTok en borrador), se conserva lo guardado en vez de poner ceros; lo que la red no mide queda vacío, no en 0; los seguidores del día van solo en la semana actual.
+- **Conexiones avisa los permisos vencidos** («Permiso vencido · conéctala de nuevo») y, en YouTube en modo Prueba, avisa desde el día 6 que el permiso está por vencer.
+- YouTube avisa si dejó el video en privado porque la app de Google aún no está verificada.
+
 ## 1.10.0 · Qué publicar con fichas grandes y menos sorpresas
 
 - **Hoy (Qué publicar) con fichas como en el celular**: cada cuenta es una franja a todo el ancho y cada video es una ficha vertical con la imagen grande y la hora encima. Al pasar el mouse el video se mueve sin sonido. Con un clic se ve en grande.

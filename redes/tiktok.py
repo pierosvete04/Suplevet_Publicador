@@ -131,6 +131,7 @@ def token(red=None):
                         "refresh_token": t["refresh_token"]}), t)
                 except ErrorRed as e:
                     if "invalid_grant" in str(e) or "refresh_token" in str(e):
+                        _escribir_cuenta({**t, "vencida": True})   # Conexiones lo muestra hasta que se reconecte
                         raise ErrorRed(f"Se venció el permiso de la cuenta de TikTok «{t.get('nombre')}»: "
                                        "reconéctala en Conexiones") from None
                     raise
@@ -205,7 +206,8 @@ class TikTok:
         if not cs and conectable:
             falta.append("Conectar la cuenta")
         defecto = nucleo.config().get("tiktok_cuenta")
-        lista = [{"id": k, "nombre": c.get("nombre"), "defecto": k == defecto or (defecto not in cs and i == 0)}
+        lista = [{"id": k, "nombre": c.get("nombre"), "defecto": k == defecto or (defecto not in cs and i == 0),
+                  "vencida": bool(c.get("vencida"))}
                  for i, (k, c) in enumerate(cs.items())]
         return {"listo": not falta, "falta": falta, "modo": nucleo.config()["tiktok_modo"], "cuentas": lista,
                 "conectable": conectable}

@@ -136,11 +136,12 @@ def archivos_permitidos():
 
 
 def _huecos(dia, horas, ocupadas):
-    """Los próximos horarios libres, día por día, saltando los que ya tienen una pieza."""
+    """Los próximos horarios libres, día por día, saltando los que ya tienen una pieza y los que ya pasaron."""
+    ahora = datetime.now().strftime("%Y-%m-%dT%H:%M")
     while True:
         for h in horas:
             f = dia.strftime("%Y-%m-%d") + "T" + h
-            if f not in ocupadas:
+            if f not in ocupadas and f > ahora:
                 ocupadas.add(f)
                 yield f
         dia += timedelta(days=1)
@@ -152,13 +153,26 @@ def _fechas(n, modo, desde, por_dia, tipos):
     if modo == "ahora":
         return [datetime.now().strftime("%Y-%m-%dT%H:%M")] * n
     horas = cfg["horarios_video"][:max(1, int(por_dia or len(cfg["horarios_video"])))]
+    hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     try:
         dia = datetime.strptime(desde, "%Y-%m-%d")
     except (TypeError, ValueError):
-        dia = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        dia = hoy + timedelta(days=1)
+    if dia < hoy:
+        raise ValueError("«Desde» es un día que ya pasó: elige hoy o un día que viene")
     ocupadas = {p.get("fecha") for p in nucleo.cola()["publicaciones"]}
     videos, carruseles = _huecos(dia, horas, ocupadas), _huecos(dia, [cfg["horario_carrusel"]], ocupadas)
     return [next(carruseles if t == "carrusel" else videos) for t in tipos]
+
+
+def _principales(redes_):
+    """{red: id} de la cuenta principal de cada red (o la primera conectada), para dejarla fija en la pieza."""
+    import redes as conectores
+    cfg, con, out = nucleo.config(), conectores.estado_conexiones(), {}
+    for red in redes_:
+        ids = [c["id"] for c in (con.get(red) or {}).get("cuentas") or []]
+        out[red] = cfg.get(f"{red}_cuenta") if cfg.get(f"{red}_cuenta") in ids else (ids[0] if ids else None)
+    return out
 
 
 def _en_cola_por_cuenta():
@@ -190,6 +204,7 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
     if not elegidas:
         raise ValueError("Esos videos ya no están en Subir contenido")
     fechas = _fechas(len(elegidas), modo, desde, por_dia, [p["tipo"] for p in elegidas])
+    principal = _principales(redes)
     import copys   # el copy lo escribe el publicador desde el guion; el .txt de la Sala queda de respaldo
     escritos = {(p["ruta"], j): copys.generar(p, j, nivel=p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), cuerpo_de(p)).get("nivel"))
                 for p in elegidas if p["tipo"] == "video" for j in range(rondas)}
@@ -224,13 +239,11 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
                 pub["copy_variante"] = j
             for red, r in pub["redes"].items():
                 r["activa"] = red in llevar
-                if llevar.get(red):
-                    r["cuenta"] = llevar[red]
-            if aprobar:
-                pub["aprobado"] = True
-                prohibidas = [a for a in nucleo.revisar_copy(pub) if "pide evitar" in a]
-                if prohibidas:
-                    pub["aprobado"] = False
+                if red in llevar:
+                    r["cuenta"] = llevar[red] or principal.get(red)
+            if aprobar:   # la misma revisión que al aprobar en la Cola; lo que no pasa queda por revisar
+                pub["aprobado"] = not nucleo.faltas(pub)
+                if not pub["aprobado"]:
                     trabadas.append(codigo)
             c["publicaciones"].append(pub)
             nuevas.append(pub)

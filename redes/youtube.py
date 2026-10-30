@@ -10,7 +10,7 @@ import urllib.parse
 
 import nucleo
 
-from . import ErrorRed, pedir
+from . import Dudoso, ErrorRed, final, pedir
 
 ALCANCES = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"
 _estados = set()
@@ -115,6 +115,8 @@ def token(red=None):
                         "refresh_token": t["refresh_token"], "grant_type": "refresh_token"})
                 except ErrorRed as e:
                     if "invalid_grant" in str(e):   # en modo Prueba de Google el permiso vence a los 7 días
+                        if t.get("id") != "_anterior":
+                            _escribir_cuenta({**t, "vencida": True})   # Conexiones lo muestra hasta que se reconecte
                         raise ErrorRed(f"Se venció el permiso del canal de YouTube «{t.get('nombre')}»: "
                                        "reconéctalo en Conexiones") from None
                     raise
@@ -145,7 +147,11 @@ class YouTube:
         if not cs and conectable:
             falta.append("Conectar el canal")
         defecto = nucleo.config().get("youtube_cuenta")
-        lista = [{"id": k, "nombre": c.get("nombre"), "defecto": k == defecto or (defecto not in cs and i == 0)}
+        # en modo Prueba de Google (app sin publicar) el permiso vence a los 7 días de conectar: se avisa desde el 6.º
+        prueba = (nucleo.config().get("revision") or {}).get("youtube", "prueba") != "aprobada"
+        lista = [{"id": k, "nombre": c.get("nombre"), "defecto": k == defecto or (defecto not in cs and i == 0),
+                  "vencida": bool(c.get("vencida")),
+                  "vence_pronto": prueba and bool(c.get("guardado")) and time.time() - c["guardado"] > 6 * 86400}
                  for i, (k, c) in enumerate(cs.items())]
         return {"listo": not falta, "falta": falta, "cuentas": lista, "conectable": conectable}
 
@@ -168,10 +174,16 @@ class YouTube:
                         "X-Upload-Content-Type": "video/mp4", "X-Upload-Content-Length": str(tam)})
         destino = ini["_cabeceras"].get("Location") or ini["_cabeceras"].get("location")
         with open(ruta, "rb") as f:
-            r = pedir("PUT", destino, cuerpo=f.read(), tiempo=1800,
+            r = final("PUT", destino, cuerpo=f.read(), tiempo=1800,
                       cabeceras={"Authorization": f"Bearer {token(red)}", "Content-Type": "video/mp4"})
-        return {"id_remoto": r["id"], "url": f"https://youtube.com/shorts/{r['id']}",
-                "cuenta": red["cuenta"], "cuenta_nombre": red["cuenta_nombre"]}
+        if not r.get("id"):
+            raise Dudoso("YouTube recibió el video pero no devolvió su id: mira en YouTube Studio si quedó subido")
+        out = {"id_remoto": r["id"], "url": f"https://youtube.com/shorts/{r['id']}",
+               "cuenta": red["cuenta"], "cuenta_nombre": red["cuenta_nombre"]}
+        quedo = (r.get("status") or {}).get("privacyStatus")
+        if quedo and quedo != cfg["youtube_privacidad"]:   # app de Google sin verificar: YouTube lo deja privado
+            out["nota"] = f"YouTube lo dejó {'privado' if quedo == 'private' else quedo}: la app de Google aún no está verificada"
+        return out
 
     def metricas(self, red):
         r = pedir("GET", "https://www.googleapis.com/youtube/v3/videos",

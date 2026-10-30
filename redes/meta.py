@@ -15,7 +15,7 @@ from pathlib import Path
 
 import nucleo
 
-from . import ErrorRed, multipart, pedir
+from . import ErrorRed, final, multipart, pedir
 
 _token_pagina = {}
 
@@ -316,8 +316,11 @@ class Instagram:
                 "media_type": "CAROUSEL", "children": ",".join(hijos), "caption": red["copy"],
                 "access_token": tok})["id"]
         esperar_contenedor(cid, tok)
-        mid = pedir("POST", f"{base()}/{ig}/media_publish", datos={"creation_id": cid, "access_token": tok})["id"]
-        link = pedir("GET", f"{base()}/{mid}", {"fields": "permalink", "access_token": tok}).get("permalink")
+        mid = final("POST", f"{base()}/{ig}/media_publish", datos={"creation_id": cid, "access_token": tok})["id"]
+        try:   # ya salió: si falla pedir el enlace, igual queda publicado (si no, «Reintentar» lo subiría dos veces)
+            link = pedir("GET", f"{base()}/{mid}", {"fields": "permalink", "access_token": tok}, tiempo=30).get("permalink")
+        except Exception:
+            link = None
         return {"id_remoto": mid, "url": link, "cuenta": ig, "cuenta_nombre": cuenta["nombre"]}
 
     def metricas(self, red):
@@ -347,24 +350,27 @@ class Facebook:
         if pub["tipo"] == "video":
             ini = pedir("POST", f"{base()}/{pagina}/video_reels", datos={"upload_phase": "start", "access_token": tp})
             subir_bytes(ini["upload_url"], pub["archivos"][0], tp)
-            pedir("POST", f"{base()}/{pagina}/video_reels", datos={
+            final("POST", f"{base()}/{pagina}/video_reels", datos={
                 "upload_phase": "finish", "video_id": ini["video_id"], "video_state": "PUBLISHED",
                 "description": red["copy"], "access_token": tp})
-            info = pedir("GET", f"{base()}/{ini['video_id']}", {"fields": "permalink_url,post_id", "access_token": tp})
+            try:   # ya salió: el enlace es un extra
+                info = pedir("GET", f"{base()}/{ini['video_id']}", {"fields": "permalink_url,post_id", "access_token": tp}, tiempo=30)
+            except Exception:
+                info = {}
             url = info.get("permalink_url")
-            return {"id_remoto": ini["video_id"], "post_id": info.get("post_id"), "cuenta": pagina, "cuenta_nombre": cuenta["nombre"],
-                    "url": ("https://www.facebook.com" + url) if url and url.startswith("/") else url}
+            return {"id_remoto": ini["video_id"], "post_id": info.get("post_id"), "reel": True, "cuenta": pagina,
+                    "cuenta_nombre": cuenta["nombre"], "url": ("https://www.facebook.com" + url) if url and url.startswith("/") else url}
         fotos = fotos_en_pagina(pub["archivos"], pagina, tp)
         datos = {"message": red["copy"], "access_token": tp}
         for n, (fid, _) in enumerate(fotos):
             datos[f"attached_media[{n}]"] = f'{{"media_fbid":"{fid}"}}'
-        r = pedir("POST", f"{base()}/{pagina}/feed", datos=datos)
+        r = final("POST", f"{base()}/{pagina}/feed", datos=datos)
         return {"id_remoto": r["id"], "post_id": r["id"], "url": f"https://www.facebook.com/{r['id']}",
                 "cuenta": pagina, "cuenta_nombre": cuenta["nombre"]}
 
     def metricas(self, red):
         tp = token_de("facebook", cuenta_de("facebook", red))
-        if red.get("post_id") and red["post_id"] != red["id_remoto"]:   # reel
+        if red.get("reel") or (red.get("post_id") and red["post_id"] != red["id_remoto"]):   # reel
             r = pedir("GET", f"{base()}/{red['id_remoto']}/video_insights", {
                 "metric": "blue_reels_play_count,post_video_social_actions", "access_token": tp})
             v = {i["name"]: (i.get("values") or [{}])[0].get("value") for i in r.get("data", [])}

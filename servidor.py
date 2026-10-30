@@ -331,7 +331,7 @@ class Manejador(BaseHTTPRequestHandler):
                     if not pub:
                         raise ValueError("Esa publicación ya no está en la cola")
                     # solo lo que falta o falló: lo que ya salió o está subiendo no se vuelve a subir
-                    sirve = ("pendiente", *nucleo.REINTENTABLES)
+                    sirve = ("pendiente", *nucleo.reintentables())
                     reds = [r for r, x in pub["redes"].items() if (r == d["red"] if d.get("red") else x.get("activa"))
                             and x.get("estado", "pendiente") in sirve]
                     if d.get("red") and not reds:

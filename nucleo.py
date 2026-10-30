@@ -299,7 +299,7 @@ def revisar_copy(pub):
         texto = (r.get("copy") or "")
         bajo = texto.lower()
         for m in malas:
-            if re.search(rf"\b{re.escape(m)}", bajo):
+            if re.search(rf"\b{re.escape(m)}\b", bajo):
                 avisos.append(f"{red}: dice «{m}», que el brief pide evitar")
         if len(texto) > LIMITES.get(red, 99999):
             avisos.append(f"{red}: el copy pasa de {LIMITES[red]} letras")
@@ -312,6 +312,62 @@ def revisar_copy(pub):
         if "suplevet" in primera.lower():
             avisos.append("TOFU: la primera línea nombra a Suplevet")
     return avisos
+
+
+FECHA_OK = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}")
+NOMBRE_RED = {"instagram": "Instagram", "facebook": "Facebook", "tiktok": "TikTok", "youtube": "YouTube"}
+EN_FIRME = ("publicando", "publicado", "simulado")   # redes que ya salieron o están saliendo: no se tocan
+
+
+def titulo_youtube(r):
+    """El título que de verdad sube a YouTube: el escrito o, si no hay, la primera línea del copy."""
+    return (r.get("titulo") or (r.get("copy") or "").strip().split("\n")[0]).strip()
+
+
+def faltas(p, solo=None, con_fecha=True):
+    """Lo que impide aprobar o publicar una pieza (en palabras simples). La misma revisión al aprobar desde la Cola,
+    Hoy o Subir contenido, al cambiar algo de una pieza aprobada y justo antes de subir. «solo»: revisar una red."""
+    out = []
+    redes_ = {k: v for k, v in p["redes"].items() if v.get("activa") and (solo is None or k == solo)}
+    if not redes_ and solo is None:
+        out.append("prende al menos una red para esta pieza")
+    if con_fecha and not FECHA_OK.match(p.get("fecha") or ""):
+        out.append("ponle día y hora de salida")
+    malas = palabras_prohibidas(p.get("semana", ""))
+    for red, r in redes_.items():
+        n, texto = NOMBRE_RED.get(red, red), r.get("copy") or ""
+        if r.get("estado") in EN_FIRME:
+            continue
+        if not texto.strip():
+            out.append(f"{n} no tiene copy")
+        for m in malas:
+            if re.search(rf"\b{re.escape(m)}\b", texto.lower()):
+                out.append(f"{n} dice «{m}», una palabra prohibida en el brief")
+        if red == "youtube":
+            if len(texto.encode("utf-8")) > LIMITES["youtube"]:
+                out.append("el texto de YouTube es demasiado largo (máximo 5000 bytes)")
+            t = titulo_youtube(r)
+            if not t:
+                out.append("YouTube no tiene título")
+            elif len(t) > LIMITES["youtube_titulo"]:
+                out.append("el título de YouTube pasa de 100 letras")
+            elif re.search(r"[<>]", t + texto):
+                out.append("YouTube no acepta los signos < ni > en el título ni en el texto")
+        elif len(texto) > LIMITES.get(red, 99999):
+            out.append(f"el copy de {n} pasa de {LIMITES[red]} letras")
+        if red == "instagram" and len(re.findall(r"#\w", texto)) > 30:
+            out.append("Instagram acepta hasta 30 hashtags")
+        if red == "instagram" and p.get("tipo") == "carrusel" and len(p.get("archivos") or []) > 10:
+            out.append("Instagram acepta hasta 10 láminas por carrusel")
+        if red == "tiktok" and config()["tiktok_modo"] == "directo" and not (r.get("ajustes_tiktok") or {}).get("privacidad"):
+            out.append("elige en TikTok quién puede ver el video")
+    return out
+
+
+def reintentables():
+    """Estados en que «Reintentar» vuelve a poner la red en pendiente. Con la simulación apagada, lo simulado también:
+    así sale de verdad."""
+    return REINTENTABLES + (() if config()["simular"] else ("simulado",))
 
 
 # ---------- Cola ----------
@@ -466,11 +522,19 @@ def cambiar(pid, cambios):
         p = buscar(c, pid)
         if not p:
             raise ValueError("No existe esa publicación")
+        estaba_aprobada = bool(p.get("aprobado"))
         for k in ("fecha", "aprobado"):
             if k in cambios:
                 p[k] = cambios[k]
         for red, r in (cambios.get("redes") or {}).items():
             if red in p["redes"]:
+                # lo que ya salió o está subiendo no se cambia: la cola mostraría un copy que nunca salió
+                if p["redes"][red].get("estado") in EN_FIRME:
+                    if any(k in r and r[k] != p["redes"][red].get(k) for k in ("activa", "copy", "titulo", "cuenta")):
+                        raise ValueError(f"{NOMBRE_RED.get(red, red)} ya salió (o está saliendo): ya no se puede cambiar")
+                    if r.get("estado") == "pendiente" and p["redes"][red].get("estado") in reintentables():
+                        p["redes"][red].update(estado="pendiente", error=None)   # lo simulado, para que salga de verdad
+                    continue
                 for k in ("activa", "copy", "titulo", "cuenta"):
                     if k in r:
                         p["redes"][red][k] = r[k]
@@ -481,22 +545,17 @@ def cambiar(pid, cambios):
                                                                                      "FOLLOWER_OF_CREATOR", "SELF_ONLY") else None,
                         **{k: bool(a.get(k)) for k in ("comentarios", "duo", "stitch", "comercial", "marca_propia", "contenido_marca")}}
                 # reintentar: solo lo que falló o quedó en duda; lo que ya salió o está subiendo no se toca
-                if r.get("estado") == "pendiente" and p["redes"][red].get("estado") in REINTENTABLES:
+                if r.get("estado") == "pendiente" and p["redes"][red].get("estado") in reintentables():
                     p["redes"][red].update(estado="pendiente", error=None)
-        if p.get("aprobado") and "fecha" in cambios and not re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", p.get("fecha") or ""):
-            raise ValueError("Una pieza aprobada necesita día y hora: ponlos o quita la aprobación")   # si no, nunca saldría
-        if cambios.get("aprobado"):
-            if not any(r.get("activa") for r in p["redes"].values()):
-                raise ValueError("No se puede aprobar: prende al menos una red para esta pieza")
-            if not re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", p.get("fecha") or ""):
-                raise ValueError("No se puede aprobar: ponle día y hora de salida")
-            tt = p["redes"].get("tiktok") or {}
-            if tt.get("activa") and config()["tiktok_modo"] == "directo" and not (tt.get("ajustes_tiktok") or {}).get("privacidad"):
-                raise ValueError("No se puede aprobar: elige en TikTok quién puede ver el video")
+        # una pieza aprobada sigue cumpliendo lo mismo que al aprobarla (si no, nunca saldría o saldría mal)
+        if p.get("aprobado"):
+            f = faltas(p)
+            if f:
+                if cambios.get("aprobado") and not estaba_aprobada:
+                    raise ValueError("No se puede aprobar: " + "; ".join(f))
+                raise ValueError("Esta pieza está aprobada y así no podría salir: " + "; ".join(f)
+                                 + ". Corrígelo o quita la aprobación.")
             p["avisos"] = revisar_copy(p)
-            prohibidas = [a for a in p["avisos"] if "pide evitar" in a]
-            if prohibidas:
-                raise ValueError("No se puede aprobar: " + "; ".join(prohibidas))
         guardar_cola(c)
         return p
 
@@ -523,8 +582,10 @@ def guardar_copy_final(p):
 
 # ---------- Publicar ----------
 
-def publicar(pid, red):
-    """Sube una publicación a una red. Marca estado y guarda el id que devuelve la red."""
+def publicar(pid, red, del_reloj=False):
+    """Sube una publicación a una red. Marca estado y guarda el id que devuelve la red.
+    del_reloj: la llama el reloj; se vuelve a mirar que siga aprobada y que su hora haya llegado (pudo cambiar
+    mientras esperaba su turno)."""
     import redes  # tarde para no cruzar imports
     with _candado:
         c = cola()
@@ -534,6 +595,15 @@ def publicar(pid, red):
         r = p["redes"][red]
         if r.get("estado") != "pendiente" or not r.get("activa"):   # ya está subiendo, ya salió, hay que revisarla o no va
             return r
+        if del_reloj and not (p.get("aprobado") and FECHA_OK.match(p.get("fecha") or "")
+                              and p["fecha"] <= datetime.now().strftime("%Y-%m-%dT%H:%M")):
+            return r   # la desaprobaron o la movieron de día mientras esperaba
+        f = faltas(p, solo=red, con_fecha=False)
+        if f:   # la misma revisión que al aprobar, también en simulación: si no saldría, no se finge que salió
+            r.update(estado="error", error="No salió: " + "; ".join(f) + ".")
+            anotar(f"ERROR {red} · {p['codigo']}: no salió: {'; '.join(f)}")
+            guardar_cola(c)
+            return r
         r.update(estado="publicando", inicio=datetime.now().isoformat(timespec="seconds"))
         guardar_cola(c)
     try:
@@ -542,18 +612,18 @@ def publicar(pid, red):
         if config()["simular"]:
             time.sleep(0.3)
             res = {"id_remoto": f"sim-{red}-{uuid.uuid4().hex[:6]}", "url": None, "simulado": True}
-            if hasattr(redes.CONECTORES[red], "cuenta_de"):
-                try:
-                    cu = redes.CONECTORES[red].cuenta_de(r)
-                    res.update(cuenta=cu.get("open_id") or cu.get("id"), cuenta_nombre=cu.get("nombre"))
-                except Exception:
-                    pass
+            if hasattr(redes.CONECTORES[red], "cuenta_de"):   # una cuenta que ya no está conectada también falla aquí
+                cu = redes.CONECTORES[red].cuenta_de(r)
+                res.update(cuenta=cu.get("open_id") or cu.get("id"), cuenta_nombre=cu.get("nombre"))
             anotar(f"[SIMULACIÓN] {red} · {p['codigo']} · {len(p['archivos'])} archivo(s) · {r.get('copy', '')[:60]!r}")
         else:
             res = redes.CONECTORES[red].publicar(p, r)
             anotar(f"Publicado {red} · {p['codigo']} → {res.get('id_remoto')}")
         nuevo = {"estado": "simulado" if res.get("simulado") else "publicado", "error": None,
                  "publicado": datetime.now().isoformat(timespec="minutes"), **res}
+    except redes.Dudoso as e:   # se cortó justo al publicar: puede que haya salido, no se reintenta solo
+        anotar(f"REVISAR {red} · {p['codigo']}: {e}")
+        nuevo = {"estado": "revisar", "error": f"No se sabe si salió: {str(e)[:300]}. Mira en la red antes de reintentar."}
     except Exception as e:
         anotar(f"ERROR {red} · {p['codigo']}: {e}\n{traceback.format_exc()}")
         nuevo = {"estado": "error", "error": str(e)[:500]}
@@ -622,7 +692,7 @@ def reloj(cada=30):
     while True:
         try:
             for pid, red in tocan_ahora():
-                publicar(pid, red)
+                publicar(pid, red, del_reloj=True)
         except Exception as e:
             anotar(f"ERROR en el reloj: {e}")
         time.sleep(cada)
@@ -639,28 +709,35 @@ def arrancar_reloj():
 # ---------- Métricas (forma del contrato metricas.json) ----------
 
 def recoger_metricas(semana=None):
+    """Pide los números de lo publicado y los suma a metricas/<semana>.json. Lo ya guardado no se pisa: si una red
+    falla (permiso vencido…) o no da datos (TikTok en borrador), la fila anterior se queda como estaba."""
     import redes
     c = cola()
     por_semana = {}
+    llave = lambda f: (f.get("codigo"), f.get("red"), f.get("cuenta"))   # noqa: E731
     for p in c["publicaciones"]:
         if semana and p.get("semana") != semana:
             continue
         for red, r in p["redes"].items():
             if r.get("estado") != "publicado" or not r.get("id_remoto"):
                 continue
+            sem = p.get("semana") or "SIN_SEMANA"
+            filas = por_semana.setdefault(sem, {})
             try:
-                m = redes.CONECTORES[red].metricas(r)
+                m = {k: v for k, v in redes.CONECTORES[red].metricas(r).items() if v is not None}
             except Exception as e:
-                anotar(f"Métricas {red} · {p['codigo']}: {e}")
-                m = {}
+                anotar(f"ERROR métricas {red} · {p['codigo']}: {e}")
+                continue
+            if not m:   # la red aún no da números de esta publicación
+                continue
             fila = {"codigo": p["codigo"], "red": red, "publicado": r.get("publicado"),
-                    "vistas": 0, "retencion_3s": 0, "vista_completa": 0, "me_gusta": 0, "comentarios": 0,
-                    "guardados": 0, "compartidos": 0, "seguidores": 0, "mensajes": 0,
+                    "vistas": 0, "me_gusta": 0, "comentarios": 0, "guardados": 0, "compartidos": 0, "seguidores": 0,
+                    "retencion_3s": None, "vista_completa": None, "mensajes": None,   # None = la red no lo da (no es 0)
                     "dolor": p.get("dolor"), "nivel": p.get("nivel"), "publico": p.get("publico")}
             if r.get("cuenta_nombre"):
                 fila["cuenta"] = r["cuenta_nombre"]
-            fila.update({k: v for k, v in m.items() if v is not None})
-            por_semana.setdefault(p.get("semana") or "SIN_SEMANA", []).append(fila)
+            fila.update(m)
+            filas[llave(fila)] = fila
     cuentas = {}
     for red, con in redes.CONECTORES.items():
         if hasattr(con, "cuentas") and con.estado().get("cuentas"):
@@ -668,13 +745,18 @@ def recoger_metricas(semana=None):
                 cuentas[red] = con.cuentas()
             except Exception as e:
                 anotar(f"Cuenta {red}: {e}")
-    if not por_semana and cuentas:   # aún no hay piezas publicadas: igual quedan los números de cada cuenta
-        import salas
-        por_semana[salas.semana_de(datetime.now().date())] = []
-    for sem, filas in por_semana.items():
-        escribir_json(METRICAS / f"{sem}.json", {"semana": sem, "recogido": datetime.now().isoformat(timespec="minutes"),
-                                                "cuentas": cuentas, "piezas": filas})
+    import salas
+    actual = salas.semana_de(datetime.now().date())
+    if cuentas:   # los números de cada cuenta (seguidores…) son de hoy: van solo en la semana actual
+        por_semana.setdefault(actual, {})
     n = sum(len(f) for f in por_semana.values())
+    for sem, nuevas in por_semana.items():
+        antes = leer_json(METRICAS / f"{sem}.json", {})
+        filas = {llave(f): f for f in antes.get("piezas") or []}
+        filas.update(nuevas)
+        escribir_json(METRICAS / f"{sem}.json", {**antes, "semana": sem, "recogido": datetime.now().isoformat(timespec="minutes"),
+                                                "cuentas": cuentas if sem == actual and cuentas else antes.get("cuentas", {}),
+                                                "piezas": list(filas.values())})
     anotar(f"Métricas recogidas: {n} fila{'s' if n != 1 else ''}" + (f" ({', '.join(por_semana)})" if por_semana else " (no hay nada publicado para medir)"))
     return {s: len(f) for s, f in por_semana.items()}
 

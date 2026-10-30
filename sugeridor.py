@@ -450,7 +450,8 @@ def aceptar(items, aprobar=False):
             v = orden.index(it["clave"]) + int((it.get("fecha") or "0000-00-00")[8:10])
             nivel = p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), produccion.cuerpo_de(p)).get("nivel")
             copies[(it["clave"], _norm(it["ruta"]))] = {**copys.generar(p, v, nivel=nivel), "variante": v}
-    nuevas, trabadas, saltadas = [], [], 0
+    nuevas, trabadas, saltadas, pasadas = [], [], 0, 0
+    ahora = datetime.now().strftime("%Y-%m-%dT%H:%M")
     with nucleo._candado:
         c = nucleo.cola()
         ya = {(u["clave"], u["ruta"]) for u in _usos(inv, list(dests.values())) + _carruseles_usados(list(dests.values()))}
@@ -458,6 +459,9 @@ def aceptar(items, aprobar=False):
             p, d = por_ruta.get(_norm(it.get("ruta"))), dests.get(it.get("clave"))
             if not p or not d or not it.get("fecha"):
                 saltadas += 1
+                continue
+            if it["fecha"] <= ahora:   # el plan se armó hace rato y esa hora ya pasó: no se programa en el pasado
+                pasadas += 1
                 continue
             llave = _norm(p["ruta"] if p["tipo"] == "carrusel" else p["archivos"][0])
             if (d["clave"], llave) in ya:
@@ -474,8 +478,8 @@ def aceptar(items, aprobar=False):
                 r["activa"] = red == d["red"]
                 if red == d["red"] and d["cuenta"]:
                     r["cuenta"] = d["cuenta"]
-            if aprobar:
-                pub["aprobado"] = not [x for x in nucleo.revisar_copy(pub) if "pide evitar" in x]
+            if aprobar:   # la misma revisión que al aprobar en la Cola
+                pub["aprobado"] = not nucleo.faltas(pub)
                 if not pub["aprobado"]:
                     trabadas.append(p["codigo"])
             c["publicaciones"].append(pub)
@@ -487,4 +491,4 @@ def aceptar(items, aprobar=False):
             threading.Thread(target=produccion.bajar_en_fondo, args=(pub,), daemon=True).start()
     nucleo.anotar(f"Sugerencias aceptadas: {len(nuevas)} piezas a la cola" + (f" · {saltadas} ya estaban" if saltadas else "")
                   + (f" · sin aprobar por palabras prohibidas: {trabadas}" if trabadas else ""))
-    return {"nuevas": len(nuevas), "saltadas": saltadas, "trabadas": trabadas}
+    return {"nuevas": len(nuevas), "saltadas": saltadas, "trabadas": trabadas, "pasadas": pasadas}

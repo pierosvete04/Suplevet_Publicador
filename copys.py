@@ -284,10 +284,11 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
 def aplicar(pub, cp):
     """Pone el copy generado en cada red de una publicación de la cola."""
     for red, r in pub["redes"].items():
-        if cp.get(red):
+        if cp.get(red) and r.get("estado") not in nucleo.EN_FIRME:   # lo que ya salió conserva el copy con que salió
             r["copy"] = cp[red]
-    if "youtube" in pub["redes"] and cp.get("youtube_titulo"):
-        pub["redes"]["youtube"]["titulo"] = cp["youtube_titulo"]
+    yt = pub["redes"].get("youtube")
+    if yt is not None and cp.get("youtube_titulo") and yt.get("estado") not in nucleo.EN_FIRME:
+        yt["titulo"] = cp["youtube_titulo"]
     pub["copy_fuente"] = cp.get("fuente")
     return pub
 
@@ -308,5 +309,7 @@ def rehacer(pid):
         if not cp:
             raise ValueError("No encontré el guion de este video ni pude transcribirlo")
         aplicar(p, cp)
+        if p.get("aprobado") and nucleo.faltas(p):   # el copy nuevo no pasa la revisión: queda por revisar
+            p["aprobado"] = False
         nucleo.guardar_cola(c)
         return p

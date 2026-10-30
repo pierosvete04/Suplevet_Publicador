@@ -736,7 +736,7 @@ function piezasVisibles(prod){return(!FL.origen||origenDe(prod)==FL.origen)&&(!F
 function listos(){
   if(!LIS&&!cargandoLis){traerListos();return}
   if(OPC.redes==null)OPC.redes=Object.keys(REDES).filter(k=>E.conexiones[k]?.listo);
-  if(!OPC.desde)OPC.desde=manana();
+  if(!OPC.desde||OPC.desde<fechaLocal(new Date()))OPC.desde=manana();   /* la app abierta varios días no programa en el pasado */
   const dr=LIS?.drive||{};
   const origen=!LIS?"":dr.fuente=="drive"?`Leído de Drive ${dr.leido?"a las "+esc(dr.leido.slice(11)):""}`:dr.fuente=="guardado"?`Sin conexión con Drive: muestro lo último que leí${dr.error?" ("+esc(dr.error)+")":""}`:"Sin cuenta de Google: miro solo las carpetas de esta PC";
   const cab=`<div class="titulo-pag"><div><h1>Subir contenido</h1><p>Lo terminado en las dos salas: los <b>videos finales</b> de la Sala de edición (carpeta V.FINALES) y los <b>posts y carruseles</b> de la Sala de diseño (carpeta FINAL). Marca lo que quieres subir, elige las redes y cuándo, y pasa a la cola.</p>${origen?`<p class="suave" style="margin-top:4px">${origen}</p>`:""}</div>
@@ -821,7 +821,7 @@ async function pasarALaCola(){
   if(!OPC.redes.length){toast("Elige al menos una red","mal");return}
   if(OPC.modo=="ahora"&&OPC.aprobar&&!E.config.simular&&!await preguntar(`¿Publicar ${selL.size} ahora?`,`Se suben de verdad a ${OPC.redes.map(k=>REDES[k][1]).join(", ")} en este momento.`,"Publicar ahora","acento"))return;
   const r=await api("/api/listos/a_la_cola",{rutas:[...selL],redes:OPC.redes,cuentas:OPC.cuentas,modo:OPC.modo,desde:OPC.desde,por_dia:OPC.por_dia,aprobar:OPC.aprobar});
-  toast(`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.repetidas?` (${r.repetidas} ya estaban en esa cuenta)`:"")+(r.trabadas.length?`. Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""),r.trabadas.length?"mal":"ok");
+  toast(`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.repetidas?` (${r.repetidas} ya estaban en esa cuenta)`:"")+(r.trabadas.length?`. Quedaron sin aprobar (ábrelas en la Cola para ver qué les falta): ${r.trabadas.join(", ")}`:""),r.trabadas.length?"mal":"ok");
   selL.clear();$("#barra-l")?.remove();await cargar(true);traerListos(true)}
 
 /* ---------- Hoy: qué subir a cada cuenta ---------- */
@@ -832,7 +832,7 @@ const desdeS=()=>SOP.desde&&SOP.desde>=hoyF()?SOP.desde:hoyF();   /* si la app q
 /* «forzar» vuelve a leer Drive (solo «Armar de nuevo»); si falla, no se deja a la vista el plan de otra fecha */
 async function traerSug(forzar){if(cargandoSug)return;cargandoSug=true;errSug="";if(tab=="hoy")hoy();
   const q=new URLSearchParams({desde:desdeS(),dias:SOP.dias,excluir:SOP.excluir.join("|")});if(forzar)q.set("forzar","1");
-  try{SUG=await api("/api/sugerencias?"+q)}catch(e){SUG=null;errSug=e?.error||"El Publicador no responde. Ciérralo y ábrelo de nuevo."}finally{cargandoSug=false;if(tab=="hoy")hoy()}}
+  try{SUG=await api("/api/sugerencias?"+q);SUG._t=Date.now()}catch(e){SUG=null;errSug=e?.error||"El Publicador no responde. Ciérralo y ábrelo de nuevo."}finally{cargandoSug=false;if(tab=="hoy")hoy()}}
 /* las cuentas prendidas (con lo que cambiaste en Ajustes aunque no esté guardado) */
 const actS=()=>new Set(SUG.destinos.filter(d=>d.activo).map(d=>d.clave));
 function elegidasS(){const out=[],act=actS();for(const d of SUG?.dias||[])for(const x of d.destinos)if(act.has(x.clave))for(const p of[...x.piezas,...(x.carrusel?[x.carrusel]:[])])if(!SOP.quitados.has(llaveS(x.clave,p)))out.push({ruta:p.ruta,clave:x.clave,fecha:p.fecha});return out}
@@ -840,6 +840,8 @@ function diaLargo(f){const d=new Date(f+"T12:00");return cap(d.toLocaleDateStrin
 function cambiarDesdeS(el){if(!el.value||el.value<hoyF()){toast("«Desde» tiene que ser hoy o un día que viene","mal");el.value=desdeS();return}SOP.desde=el.value;SOP.quitados.clear();traerSug()}
 function hoy(){
   if(!SUG&&!cargandoSug&&!errSug){traerSug();return}
+  /* un plan de hace más de 30 min (o de otro día) ya tiene horas que pasaron: se vuelve a armar solo */
+  if(SUG&&!cargandoSug&&(Date.now()-(SUG._t||0)>18e5||desdeS()!=(SUG.dias[0]?.dia||desdeS()))){SOP.quitados.clear();traerSug()}
   /* al repintar no se pierde lo que cambiaste en Ajustes (y si no cambiaste nada, no dice que hay cambios) */
   if(SOP.ajustes&&$("#aj-n")){const l=leerAj();ajBorr=Object.keys(l).some(k=>String(l[k])!=String(SUG.ajustes[k]??(k=="entre_cuentas"?1:"")))?l:null}
   const cab=`<div class="titulo-pag"><div><h1>Qué publicar</h1><p>Arma lo de cada cuenta con los videos terminados. Nunca pone dos videos del mismo cuerpo en una cuenta el mismo día.</p></div>
@@ -962,7 +964,7 @@ async function aceptarS(){if(pasandoS)return;const el=elegidasS();if(!el.length)
   pasandoS=true;barraS();let r=null;
   try{r=await api("/api/sugerencias/aceptar",{items:el,aprobar:SOP.aprobar})}catch(e){}finally{pasandoS=false}
   if(!r){barraS();return}
-  toast(r.nuevas?`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.trabadas.length?`. Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""):"No pasó nada nuevo: esas piezas ya estaban en la cola.",r.trabadas.length?"mal":r.nuevas?"ok":"");
+  toast(r.nuevas?`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.trabadas.length?`. Quedaron sin aprobar (ábrelas en la Cola para ver qué les falta): ${r.trabadas.join(", ")}`:"")+(r.pasadas?`. ${r.pasadas} no ${r.pasadas==1?"pasó":"pasaron"}: su hora ya había pasado`:""):r.pasadas?"No pasó nada: esas horas ya pasaron. Se armó de nuevo con las horas que quedan.":"No pasó nada nuevo: esas piezas ya estaban en la cola.",r.trabadas.length||r.pasadas?"mal":r.nuevas?"ok":"");
   SOP.quitados.clear();SOP.excluir=[];$("#barra-s")?.remove();LIS=null;SUG=null;await cargar(true);traerSug()}
 
 /* ---------- Cola: una sola lista, tres formas de verla ---------- */
@@ -1007,7 +1009,7 @@ function vTablero(l){
 async function aprobarVarias(ids){if(!await preguntar(`¿Aprobar ${ids.length} piezas?`,"Saldrán solas a su hora mientras el publicador esté abierto.","Aprobar","ok"))return;
   let n=0,tr=[];for(const id of ids){const p=E.cola.publicaciones.find(x=>x.id==id);if(p&&faltaAprobar(p.redes,p.fecha)){tr.push(p.codigo);continue}
     try{await api(`/api/pub/${id}/cambiar`,{aprobado:true});n++}catch(e){tr.push(p?.codigo)}}
-  toast(`Aprobadas ${n}.`+(tr.length?` No se aprobaron (sin red, sin fecha o con palabras prohibidas): ${tr.join(", ")}`:""),tr.length?"mal":"ok");cargar()}
+  toast(`Aprobadas ${n}.`+(tr.length?` No se aprobaron (ábrelas para ver qué les falta): ${tr.join(", ")}`:""),tr.length?"mal":"ok");cargar()}
 function lunes(off){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+off*7);return d}
 const fechaLocal=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 function vCalendario(l){
@@ -1034,12 +1036,14 @@ async function cerrarEditor(){if(ed?.sucio&&!await preguntar("¿Salir sin guarda
 const estRed=(r,activa,k)=>!activa&&r.estado=="pendiente"?`<span class="est" data-est="${k}" style="color:var(--suave)">No va</span>`:`<span class="est ${r.estado}" data-est="${k}">${ESTADO[r.estado]||r.estado}</span>`;
 function pintarEditor(todo){
   const p=E.cola.publicaciones.find(x=>x.id==ed.id);if(!p){ed=null;return}
-  if(!todo){/* al refrescar solo se actualizan los estados, no lo que estás escribiendo */
-    document.querySelectorAll("[data-est]").forEach(e=>{const k=e.dataset.est,r=p.redes[k];e.outerHTML=estRed(r,ed.borr[k]?.activa,k)});return}
+  if(!todo){/* al refrescar: sin cambios tuyos se repinta todo (errores, «Reintentar», lo que ya salió); con cambios, solo los estados */
+    if(!ed.sucio&&!escribiendo()){ed.borr=JSON.parse(JSON.stringify(p.redes));ed.fecha=p.fecha||"";todo=true}
+    else{document.querySelectorAll("[data-est]").forEach(e=>{const k=e.dataset.est,r=p.redes[k];e.outerHTML=estRed(r,ed.borr[k]?.activa,k)});return}}
   const k=ed.red,r=ed.borr[k],orig=p.redes[k];
   const media=p.tipo=="video"?`<video src="${arc(p.archivos[0])}" controls playsinline preload="metadata"></video>`:`<div class="carr">${p.archivos.map(a=>`<img src="${arc(a)}" alt="">`).join("")}</div>`;
   const cs=E.conexiones[k]?.cuentas||[];const def=(cs.find(c=>c.defecto)||cs[0])?.id;
-  const salio=["publicado","simulado","publicando"].includes(orig.estado);
+  const salio=["publicado","simulado","publicando"].includes(orig.estado),bl=salio?"disabled":"";
+  const nomCta=(cs.find(c=>c.id==(orig.cuenta||r.cuenta||def))?.nombre)||orig.cuenta_nombre||"suplevet";
   const viejo=$("#panel").dataset.id==p.id?$("#panel .pantalla video, #panel .pantalla .carr"):null;   // no recargar el video al cambiar de red
   $("#panel").dataset.id=p.id;
   $("#panel").innerHTML=`<div class="panel-cab"><div style="flex:1;min-width:0"><h2>${esc(p.codigo)}</h2>
@@ -1049,42 +1053,44 @@ function pintarEditor(todo){
     <div><div class="tel"><div class="pantalla ${p.tipo=="video"?"video":""}">${media}
       <div class="marca-red">${redIc(k)}</div>
       ${p.tipo=="video"?'<div class="lado"><span></span><span></span><span></span></div>':""}
-      <div class="capa">${k=="youtube"?`<div class="yt" id="pv-tit">${esc(r.titulo||"")}</div>`:""}<b>@suplevet</b><div class="texto" id="pv-copy">${esc(r.copy||"")}</div></div></div></div>
+      <div class="capa">${k=="youtube"?`<div class="yt" id="pv-tit">${esc(r.titulo||"")}</div>`:""}<b>${esc(nomCta.startsWith("@")?nomCta:"@"+nomCta)}</b><div class="texto" id="pv-copy">${esc(r.copy||"")}</div></div></div></div>
       <p class="suave" style="text-align:center;margin-top:10px">Vista previa aproximada de cómo se verá en ${REDES[k]?.[1]||k}.</p></div>
     <div>
      <div class="tabs-red" role="tablist">${Object.keys(ed.borr).map(x=>`<button role="tab" aria-selected="${x==k}" class="tab-red ${x==k?"on":""}" onclick="cambiarRed('${x}')">${redIc(x,ed.borr[x].activa?"":"apagada")}${REDES[x]?.[1]||x}${estRed(p.redes[x],ed.borr[x].activa,x)}</button>`).join("")}</div>
      <div class="caja" style="display:flex;flex-direction:column;gap:14px">
-      <div class="fila"><label class="interruptor"><input type="checkbox" ${r.activa?"checked":""} onchange="ed.borr.${k}.activa=this.checked;ed.sucio=true;pintarEditor(true)"><span class="riel"></span>Publicar en ${REDES[k]?.[1]||k}</label>
+      <div class="fila"><label class="interruptor"><input type="checkbox" ${r.activa?"checked":""} ${bl} onchange="ed.borr.${k}.activa=this.checked;ed.sucio=true;pintarEditor(true)"><span class="riel"></span>Publicar en ${REDES[k]?.[1]||k}</label>
        ${orig.url?`<a class="btn sec chico" href="${esc(orig.url)}" target="_blank" style="margin-left:auto">${ic("ojo")}Ver publicada</a>`:""}</div>
       ${cs.length?(salio?`<div class="suave">Salió en: <b>${esc(orig.cuenta_nombre||cs.find(c=>c.id==(orig.cuenta||def))?.nombre||"")}</b></div>`:
         `<label class="campo">${QUE_CUENTA[k]}<select onchange="ed.borr.${k}.cuenta=this.value;ed.sucio=true${k=="tiktok"?";pintarEditor(true)":""}">${cs.map(c=>`<option value="${esc(c.id)}" ${c.id==(r.cuenta||def)?"selected":""}>${esc(c.nombre)}${c.defecto?" (por defecto)":""}</option>`).join("")}</select></label>`):""}
       ${k=="tiktok"&&E.config.tiktok_modo=="directo"&&p.tipo=="video"?panelTikTok(r,salio):""}
-      ${k=="youtube"?`<label class="campo">Título del Short<input value="${esc(r.titulo)}" maxlength="100" oninput="ed.borr.youtube.titulo=this.value;ed.sucio=true;$('#pv-tit').textContent=this.value;cont(this,100,'c-tit')"><span class="contador" id="c-tit">${(r.titulo||"").length} / 100</span></label>`:""}
+      ${k=="youtube"?`<label class="campo">Título del Short<input value="${esc(r.titulo)}" maxlength="100" ${bl} placeholder="${esc((r.copy||"").split("\n")[0].slice(0,100))}" oninput="ed.borr.youtube.titulo=this.value;ed.sucio=true;$('#pv-tit').textContent=this.value;cont(this,100,'c-tit')"><span class="contador" id="c-tit">${(r.titulo||"").length} / 100</span></label>`:""}
       <label class="campo">Copy${k=="tiktok"&&E.config.tiktok_modo=="borrador"?' <span class="suave" style="font-weight:400">· en modo borrador lo pegas tú al publicar desde el celular</span>':""}
-       <textarea oninput="ed.borr.${k}.copy=this.value;ed.sucio=true;$('#pv-copy').textContent=this.value;cont(this,${LIMITE[k]||2200},'c-copy')">${esc(r.copy)}</textarea>
+       <textarea ${bl} oninput="ed.borr.${k}.copy=this.value;ed.sucio=true;$('#pv-copy').textContent=this.value;cont(this,${LIMITE[k]||2200},'c-copy')">${esc(r.copy)}</textarea>
        <span class="contador ${(r.copy||"").length>(LIMITE[k]||2200)?"pasa":""}" id="c-copy">${fmt((r.copy||"").length)} / ${fmt(LIMITE[k]||2200)} caracteres</span></label>
-      <div class="fila">${r.activa&&Object.entries(ed.borr).some(([x,y])=>x!=k&&y.activa)?`<button class="btn sec chico" onclick="copiarATodas()">Usar este copy en las demás redes</button>`:""}
+      ${salio?`<p class="suave" style="margin:0">${orig.estado=="publicando"?"Se está subiendo":"Ya salió"} con este copy: aquí ya no se puede cambiar.</p>`:""}
+      <div class="fila" ${salio?"hidden":""}>${r.activa&&Object.entries(ed.borr).some(([x,y])=>x!=k&&y.activa)?`<button class="btn sec chico" onclick="copiarATodas()">Usar este copy en las demás redes</button>`:""}
        <button class="btn sec chico" onclick="otroCopy()" title="Lo vuelve a escribir desde el guion, con otro emoji, otro orden y otro cierre">${ic("refrescar")}Escribir otro copy</button></div>
       ${p.copy_fuente=="transcripción"?`<p class="avisos" style="margin-top:8px">Este video no tiene guion: el copy salió de lo que se escucha en el audio. Revísalo antes de aprobar.</p>`:""}
       ${orig.error?`<div class="err"><b>${orig.estado=="revisar"?"Revisa antes de reintentar.":orig.estado=="atrasado"?"Atrasada.":"No se pudo subir."}</b> ${esc(orig.error)}</div>`:""}${orig.nota?`<div class="nota">${esc(orig.nota)}</div>`:""}
       ${p.avisos?.length?`<ul class="avisos">${p.avisos.map(a=>`<li>${esc(a)}</li>`).join("")}</ul>`:""}
      </div>
-     <div class="caja"><label class="campo">Día y hora de salida<input type="datetime-local" value="${esc(ed.fecha)}" onchange="ed.fecha=this.value;ed.sucio=true" style="max-width:260px"></label>
-      <p class="suave" style="margin:8px 0 0">Sale sola a esta hora si está aprobada y el publicador está abierto.</p></div>
+     <div class="caja"><label class="campo">Día y hora de salida<input type="datetime-local" value="${esc(ed.fecha)}" min="${ahoraLocal()}" onchange="if(this.value&&this.value<ahoraLocal()){toast('Esa hora ya pasó: elige una que viene','mal');this.value=ed.fecha;return}ed.fecha=this.value;ed.sucio=true" style="max-width:260px"></label>
+      <p class="suave" style="margin:8px 0 0">Sale sola a esta hora si está aprobada y el Publicador está abierto.</p></div>
     </div></div>
    <div class="panel-pie">
     <button class="btn prim" onclick="guardarEditor()">${ic("check")}Guardar cambios</button>
     ${p.aprobado?`<button class="btn sec" onclick="aprobarEditor(false)">Quitar aprobación</button>`:`<button class="btn ok" onclick="aprobarEditor(true)">Guardar y aprobar</button>`}
-    ${REINTENTAR.includes(orig.estado)?`<button class="btn sec" onclick="publicar('${p.id}','${k}')">${ic("refrescar")}Reintentar en ${REDES[k]?.[1]||k}</button>`:""}
+    ${REINTENTAR.includes(orig.estado)?`<button class="btn sec" onclick="reintentarEditor('${k}')">${ic("refrescar")}Reintentar en ${REDES[k]?.[1]||k}</button>`
+     :orig.estado=="simulado"&&!E.config.simular&&r.activa?`<button class="btn sec" onclick="reintentarEditor('${k}')">${ic("enviar")}Publicar de verdad en ${REDES[k]?.[1]||k}</button>`:""}
     <button class="btn acento" style="margin-left:auto" onclick="publicarEditor()">${ic("enviar")}Publicar ahora</button></div>`;
   if(viejo)$("#panel .pantalla").firstElementChild.replaceWith(viejo);
 }
 function cont(el,lim,id){const n=el.value.length,c=$("#"+id);c.textContent=`${fmt(n)} / ${fmt(lim)}${id=="c-copy"?" caracteres":""}`;c.classList.toggle("pasa",n>lim)}
 function cambiarRed(k){ed.red=k;pintarEditor(true)}
 async function otroCopy(){if(ed.sucio&&!await preguntar("¿Escribir otro copy?","Se pierden los cambios que todavía no guardaste.","Escribir otro","peligro"))return;
-  toast("Escribiendo…");const p=await api(`/api/pub/${ed.id}/copy`,{});ed.borr=JSON.parse(JSON.stringify(p.redes));ed.sucio=false;
+  toast("Escribiendo…");const p=await api(`/api/pub/${ed.id}/copy`,{});ed.borr=JSON.parse(JSON.stringify(p.redes));ed.sucio=ed.fecha!=(p.fecha||"");
   toast(p.copy_fuente=="transcripción"?"Listo. Salió del audio: revísalo.":"Listo, copy nuevo desde el guion","ok");E=await api("/api/estado");pintar();pintarEditor(true)}
-function copiarATodas(){const t=ed.borr[ed.red].copy;Object.keys(ed.borr).forEach(k=>{if(k!=ed.red&&ed.borr[k].activa)ed.borr[k].copy=t});ed.sucio=true;toast("Copiado en las demás redes prendidas. Falta guardar.")}
+function copiarATodas(){const t=ed.borr[ed.red].copy,p=E.cola.publicaciones.find(x=>x.id==ed.id);Object.keys(ed.borr).forEach(k=>{if(k!=ed.red&&ed.borr[k].activa&&!["publicado","simulado","publicando"].includes(p?.redes[k]?.estado))ed.borr[k].copy=t});ed.sucio=true;toast("Copiado en las demás redes prendidas. Falta guardar.")}
 /* TikTok, modo directo: la pantalla que pide TikTok para aprobar apps que publican (la revisa en su auditoría) */
 const TTC={};  // lo que TikTok deja a cada cuenta, preguntado una vez por cuenta
 function panelTikTok(r,salio){
@@ -1118,6 +1124,8 @@ async function guardarEditor(silencio){
   if(!silencio)toast("Cambios guardados","ok");E=await api("/api/estado");pintar();pintarEditor(true)}
 async function aprobarEditor(si){const f=si&&faltaAprobar(ed.borr,ed.fecha);if(f)return toast(f,"mal");await guardarEditor(true);await api(`/api/pub/${ed.id}/cambiar`,{aprobado:si});toast(si?"Aprobada. Saldrá sola a su hora.":"Aprobación quitada",si?"ok":"");E=await api("/api/estado");pintar();pintarEditor(true)}
 async function publicarEditor(){await guardarEditor(true);await publicar(ed.id)}
+async function reintentarEditor(k){if(ed.sucio)await guardarEditor(true);await publicar(ed.id,k)}
+const ahoraLocal=()=>{const d=new Date();return fechaLocal(d)+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
 
 async function importar(){const ruta=$("#ruta").value.trim();if(!ruta){toast("Pega primero la ruta de la carpeta","mal");$("#ruta").focus();return}
   const r=await api("/api/importar",{ruta});toast(`Entraron ${r.nuevas} piezas nuevas${r.repetidas?` (${r.repetidas} ya estaban)`:""}`,"ok");cargar()}
@@ -1281,7 +1289,8 @@ function conexiones(){
     const url=meta?"/conectar/meta":`/conectar/${k}`,conectar=meta?"Conectar con Facebook":`Conectar ${REDES[k][1]}`,agregar=meta?"Agregar páginas":`Agregar ${que}`;
     return `<div class="caja red-caja"><div class="cab">${redIc(k,"grande "+(x.listo?"":"apagada"))}<div style="flex:1"><h3>${REDES[k][1]}</h3><span class="est ${x.listo?"listo":"falta"}">${x.listo?"Conectado":"Falta conectar"}</span></div></div>
      ${x.falta.length?`<div><div class="suave" style="font-weight:600;margin-bottom:4px">Qué falta</div><ul class="falta-l">${faltaTxt(x.falta).map(f=>`<li>${f}</li>`).join("")}</ul></div>`:""}
-     ${cs?.length?`<div class="cuentas">${cs.map(a=>`<div class="cuenta-f"><span class="nom" title="${esc(a.nombre)}">${esc(a.nombre)}</span>${a.defecto?'<span class="est simulado">Por defecto</span>':`<button class="btn fant chico" onclick="api('/api/${k}/defecto',{id:'${esc(a.id)}'}).then(cargar)" title="Usar por defecto" aria-label="Usar ${esc(a.nombre)} por defecto">${ic("estrella")}</button>`}
+     ${cs?.length?`<div class="cuentas">${cs.map(a=>`<div class="cuenta-f"><span class="nom" title="${esc(a.nombre)}">${esc(a.nombre)}</span>${a.vencida?'<span class="est error" title="La red ya no deja publicar con esta conexión. Pulsa «Agregar cuenta» y entra con la misma cuenta.">Permiso vencido · conéctala de nuevo</span>'
+       :a.vence_pronto?'<span class="est atrasado" title="Mientras la app de Google esté en modo Prueba, el permiso vence a los 7 días de conectar. Conéctala de nuevo antes para que no falle una subida.">Vence pronto · conéctala de nuevo</span>':""}${a.defecto?'<span class="est simulado">Por defecto</span>':`<button class="btn fant chico" onclick="api('/api/${k}/defecto',{id:'${esc(a.id)}'}).then(cargar)" title="Usar por defecto" aria-label="Usar ${esc(a.nombre)} por defecto">${ic("estrella")}</button>`}
        <button class="btn fant chico" onclick="quitarCuenta('${k}','${jq(a.id)}','${jq(a.nombre)}')" aria-label="Quitar ${esc(a.nombre)}" title="Quitar">${ic("x")}</button></div>`).join("")}</div>`:""}
      <p class="suave" style="margin:0">${AYUDA[k]}</p>
      ${oauth?`<div><a class="btn ${cs?.length?"sec":"prim"}" href="${url}" target="_blank" rel="noopener" onclick="toast('Se abrió tu navegador: entra con la cuenta que quieres sumar y vuelve aquí. Aparece sola.')">${ic(cs?.length?"mas":"conexiones")}${cs?.length?agregar:conectar}</a></div>`:""}</div>`};
@@ -1397,7 +1406,8 @@ document.addEventListener("focusout",()=>{editando=!!ed});
 /* lo que escribes en Preparación, Conexiones o Ajustes de Hoy y todavía no guardas: el refresco no lo borra */
 let sucio=false;
 ["input","change"].forEach(t=>document.addEventListener(t,e=>{if(e.target.closest?.("#main [data-borrador]")&&!e.target.closest("[data-libre]"))sucio=true}));
-setInterval(()=>{if(!editando&&!sucio&&tab!="pauta")cargar()},15000);
+const escribiendo=()=>!!document.activeElement?.matches?.("textarea,input:not([type=checkbox]),select");
+setInterval(()=>{if(!escribiendo()&&!sucio&&tab!="pauta")cargar()},15000);
 (async()=>{await Cuenta.iniciar({app:"Publicador",letra:"P",fondo:"linear-gradient(135deg,#047857,#10b981 60%,#a3e635)",lugar:$("#cuentaChip"),alVolver:()=>location.reload(),menu:menuCuenta,version:()=>E?.version,alCambiarTema:cambiarTema,
   preguntar:t=>preguntar("¿Seguro?",t),avisar:t=>toast(t,"mal")});
 cargar(true);revisarAct();setInterval(revisarAct,36e5)})();

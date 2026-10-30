@@ -11,6 +11,23 @@ class ErrorRed(Exception):
     pass
 
 
+class Dudoso(ErrorRed):
+    """Falló el último paso (el que publica) sin respuesta clara: puede que haya salido. No se reintenta solo."""
+
+
+def final(metodo, url, **kw):
+    """El pedido que publica de verdad. Si se corta (sin respuesta, tiempo agotado, error 5xx de la red), no se sabe
+    si salió: Dudoso, para que la pieza quede en «revisar» y «Reintentar» no la suba dos veces."""
+    try:
+        return pedir(metodo, url, **kw)
+    except ErrorRed as e:
+        if str(e)[:1] == "5":
+            raise Dudoso(f"La red respondió con un error al publicar ({str(e)[:120]})") from None
+        raise
+    except (OSError, ValueError) as e:      # sin conexión, tiempo agotado, conexión cortada
+        raise Dudoso(f"Se cortó la conexión al publicar ({e})") from None
+
+
 def pedir(metodo, url, params=None, datos=None, json_=None, cabeceras=None, cuerpo=None, tiempo=300):
     """HTTP sin dependencias. datos = formulario, json_ = JSON, cuerpo = bytes ya armados."""
     if params:
