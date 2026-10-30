@@ -1,3 +1,7 @@
+## 1.8.1 · Bordes iguales en las tres apps
+
+- Bordes iguales en las tres apps: las casillas para escribir o elegir y los botones con esquinas de 9 px, las tarjetas de 14 px y las ventanas de 16 px. La muestra del selector de color también se ve redondeada.
+
 ## 1.8.0 · Subir contenido más claro, Procesos arriba y logos de verdad
 
 - La pestaña **Listos** ahora se llama **Subir contenido**. Muestra solo lo terminado: los **videos finales** de la Sala de edición (carpeta V.FINALES; nada de partes sueltas ni clips) y los **posts y carruseles** de la Sala de diseño (carpeta FINAL).

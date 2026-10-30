@@ -441,6 +441,19 @@ dialog .dp{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;backg
 .aj-s{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-top:10px}
 @media (max-width:640px){.sug-rej{grid-template-columns:1fr}.sug-f{flex-wrap:wrap}.sug-f .c{flex-basis:calc(100% - 140px)}}
 </style>
+<style id="bordes-comunes">
+/* Bordes: una sola escala, igual en la Sala de edición, la Sala de diseño y el Publicador (si se cambia aquí, se
+   cambia en las tres). 9 px las casillas para escribir o elegir y los botones · 14 px las tarjetas y cuadros ·
+   16 px las ventanas · las píldoras, redondas. */
+:root { --r-campo: 9px; --r-caja: 14px; --r-ventana: 16px; --r-chip: 999px; }
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]), select:not([hidden]), textarea:not([hidden]) { border-radius: var(--r-campo); }
+input[type=color] { overflow: hidden; }
+input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+input[type=color]::-webkit-color-swatch { border: 0; border-radius: calc(var(--r-campo) - 3px); }
+.btn { border-radius: var(--r-campo); }
+.caja { border-radius: var(--r-caja); }
+dialog:not(#dlgEditor) { border-radius: var(--r-ventana); }
+</style>
 </head>
 <body>
 <header class="top">
