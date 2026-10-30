@@ -33,7 +33,8 @@ CIERRE = {"B2B": ["👉 Escríbenos por WhatsApp y te contamos más.", "📲 ¿Q
                   "👇 Comenta «QUIERO» y te escribimos."]}
 TAGS = {"B2B": "#veterinario #medicinaveterinaria #suplevet #nutricionveterinaria #perros #gatos",
         "B2C": "#perros #mascotas #suplevet #perrosfelices #saludcanina #gatos"}
-_VERBOS = r"^(ayuda|ayudan|apoya|apoyan|mejora|reduce|fortalece|protege|cuida|aporta|favorece|regenera|conserva|refuerza)\b"
+_VERBOS = (r"^(ayuda|ayudan|apoya|apoyan|mejora|reduce|fortalece|protege|cuida|aporta|favorece|regenera|conserva|refuerza|"
+           r"tiene|tienen|contiene|trae|mantiene|aumenta)\b")
 
 
 def _clave(n):
@@ -86,20 +87,18 @@ def guion_de(prod):
 
 
 def _ids(codigo, guion):
-    """De «S03-C1-H2-CTA1» saca (C1, C1_H2, C1_CTA1 o CTA1). Sin C<n> («SUPLEVET H3 1012»), el primer cuerpo con ese hook."""
+    """De «S03-C1-H2-CTA1» saca (C1, C1_H2, C1_CTA1 o CTA1); de «P2H1», (C2, C2_H1, …). Sin cuerpo en el nombre
+    («SUPLEVET H3 1012»), el primer cuerpo con ese hook. Sin CTA en el nombre, el del cuerpo (C1_CTA o CTA1 para C1)."""
     piezas = guion.get("piezas", {})
-    c = re.search(r"(?:^|[-_ ])(C\d+)(?=[-_ ]|$)", codigo, re.I)
-    h = re.search(r"(?:^|[-_ ])H(\d+)(?=[-_ ]|$)", codigo, re.I)
-    t = re.search(r"(?:^|[-_ ])(CTA[\w]*?)(?=[-_ ]|$)", codigo, re.I)
-    cuerpo = c.group(1).upper() if c else None
+    cuerpo, h, tt = nucleo.partes_codigo(codigo)
+    if cuerpo and cuerpo not in piezas:
+        cuerpo = None
     if not cuerpo and h:
-        cuerpo = next((k.split("_")[0] for k in piezas if re.fullmatch(rf"C\d+_H{h.group(1)}", k)), None)
+        cuerpo = next((k.split("_")[0] for k in piezas if re.fullmatch(rf"C\d+_{h}", k)), None)
     cuerpo = cuerpo or next((k for k, v in piezas.items() if v.get("tipo") == "cuerpo"), None)
-    hook = f"{cuerpo}_H{h.group(1)}" if h and cuerpo else None
-    cta = None
-    if t:
-        tt = t.group(1).upper()
-        cta = next((k for k in (f"{cuerpo}_{tt}", tt) if k in piezas), None)
+    hook = f"{cuerpo}_{h}" if h and cuerpo else None
+    cands = (f"{cuerpo}_{tt}", tt) if tt else (f"{cuerpo}_CTA", f"CTA{(cuerpo or '')[1:]}", "CTA")
+    cta = next((k for k in cands if k in piezas or k in (guion.get("copies") or {}).get("ctas", {})), None)
     return cuerpo, hook, cta
 
 
@@ -154,6 +153,21 @@ def _frases(texto):
     return [f.strip() for f in re.split(r"(?<=[.!?…])\s+", texto or "") if len(f.strip()) > 3]
 
 
+def _clausulas(texto):
+    """El cuerpo en ideas enteras: corta en los puntos y antes de «, tiene…» / «, ayuda…». Las «partes» del guion no
+    sirven: son trozos de subtítulo que terminan a mitad de frase («tiene zinc y vitaminas que cuidan su piel y»)."""
+    out = []
+    for f in _frases(texto):
+        out += re.split(r",\s+(?=(?:y\s+)?(?:tiene|tienen|contiene|ayuda|ayudan|apoya|apoyan|mejora|reduce|cuida|protege|refuerza)\b)",
+                        f, flags=re.I)
+    return [x.strip() for x in out if len(x.strip()) > 3]
+
+
+def _texto(x):
+    """Un copy del guion puede venir como texto o como {"texto": …}."""
+    return (x.get("texto") if isinstance(x, dict) else x) or ""
+
+
 # ---------- Armar el copy ----------
 
 def _sin_saludo(t):
@@ -165,7 +179,7 @@ def _sin_saludo(t):
 def _beneficio(f):
     f = re.sub(r"^(y|además|también|siempre)\s*,?\s*", "", f.strip(), flags=re.I)
     f = re.sub(r"^suplevet\s+", "", f, flags=re.I)
-    f = f.rstrip(".")
+    f = re.sub(r"\s+(y|e|de|que|con|para)$", "", f.rstrip(" .,;:"), flags=re.I)
     return f[:1].upper() + f[1:] if f else f
 
 
@@ -176,6 +190,14 @@ def _cortar(t, n):
     return t + "…"
 
 
+def _corto(t, n=110):
+    """Un beneficio largo se corta en su última coma antes de n letras (queda una idea entera); si no hay, con «…»."""
+    if len(t) <= n:
+        return t
+    i = t.rfind(", ", 40, n)
+    return t[:i] if i > 0 else _cortar(t, n)
+
+
 def _tipo(t):
     return unicodedata.normalize("NFKD", (t or "").lower()).encode("ascii", "ignore").decode()
 
@@ -184,18 +206,24 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
     """{instagram, facebook, tiktok, youtube_titulo, youtube, fuente} para una pieza de Listos. Vacío si no hay de dónde."""
     codigo, prod = pieza.get("codigo") or "", pieza.get("produccion") or ""
     guion = guion_de(prod)
-    gancho, tipo, partes, cierre_guion, tags, publico = "", "", [], "", "", ""
+    gancho, tipo, partes, cierre_guion, cierre_escrito, del_cuerpo, tags, publico = "", "", [], "", "", "", "", ""
     if guion:
-        piezas, cps = guion.get("piezas", {}), guion.get("copies", {})
+        piezas, cps = guion.get("piezas", {}), guion.get("copies") or {}
         cuerpo, hook, cta = _ids(codigo, guion)
         publico = "B2B" if "veterin" in (guion.get("publico") or "").lower() else "B2C"
         if hook and hook in piezas:
             tipo = piezas[hook].get("tipo", "")
-            gancho = cps.get("hooks", {}).get(hook) or _sin_saludo(piezas[hook].get("texto", ""))
-        partes = (piezas.get(cuerpo) or {}).get("partes") or _frases((piezas.get(cuerpo) or {}).get("texto"))
+            gancho = _texto((cps.get("hooks") or {}).get(hook)) or _sin_saludo(piezas[hook].get("texto", ""))
+        pc = piezas.get(cuerpo) or {}
+        partes = _clausulas(pc.get("texto") or " ".join(pc.get("partes") or []))
         if cta:
-            cierre_guion = piezas[cta].get("texto", "")
-        tags = (cps.get("cuerpos", {}).get(cuerpo) or {}).get("hashtags", "")
+            cierre_escrito = _texto((cps.get("ctas") or {}).get(cta))     # el copy del CTA que escribió el guionista
+            cierre_guion = (piezas.get(cta) or {}).get("texto", "")       # lo que dice el video
+            if len(cierre_guion) > 200:   # guiones de rondas juntan varios CTA en uno: solo las dos primeras frases
+                cierre_guion = " ".join(_frases(cierre_guion)[:2])[:200]
+        escrito = (cps.get("cuerpos") or {}).get(cuerpo) or {}
+        del_cuerpo = _texto(escrito).strip()                               # el copy del cuerpo que escribió el guionista
+        tags = escrito.get("hashtags", "") if isinstance(escrito, dict) else ""
         fuente = "guion"
     else:
         texto = transcripcion(pieza["archivos"][0], transcribir) if pieza.get("tipo") == "video" else None
@@ -207,7 +235,7 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
         # lo hablado es largo: el hook es la primera idea, cortada en la primera coma después de unas palabras
         primera = _sin_saludo(fr[0]) if fr else ""
         corte = re.search(r"^(.{25,95}?)[,;:]\s", primera)
-        gancho, partes = (corte.group(1) if corte else _cortar(primera, 95)), fr[1:]
+        gancho, partes = (corte.group(1) if corte else _cortar(primera, 95)), _clausulas(" ".join(fr[1:]))
         publico = "B2B" if re.search(r"veterin|pacientes|consulta", texto, re.I) else "B2C"
         fuente = "transcripción"
     if not gancho and not partes:
@@ -221,24 +249,35 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
     if nivel == "TOFU" and "suplevet" in gancho.lower():      # TOFU: la marca no va en la primera línea
         gancho = re.sub(r"\s*suplevet\s*", " ", gancho, flags=re.I).strip()
     primera = f"{em} {gancho}"
-    # beneficios: las frases que empiezan con «ayuda», «apoya»… (después de sacar «Y», «Suplevet»), enteras y cortas
-    buenos = [b for b in (_beneficio(f) for f in partes) if re.match(_VERBOS, b, re.I) and len(b) <= 110]
+    # beneficios: las ideas que empiezan con «ayuda», «tiene»… (después de sacar «Y», «Suplevet»), enteras y cortas
+    buenos = []
+    for b in (_beneficio(f) for f in partes):
+        if re.match(_VERBOS, b, re.I) and len(b) <= 160 and _corto(b) not in buenos:
+            buenos.append(_corto(b))
     if not buenos and fuente == "guion":
-        buenos = [_cortar(_beneficio(f), 100) for f in partes[1:3]]
+        buenos = [_corto(_beneficio(f)) for f in partes[1:3] if not re.match(r"se llama", _beneficio(f), re.I)]
     if buenos:
         k = v % len(buenos)
         buenos = buenos[k:] + buenos[:k]           # otra cuenta, otro orden
     lista = "\n".join(f"✅ {b}" for b in buenos[:3])
-    cierres = CIERRE[publico or "B2C"]
-    cierre = cierres[v % len(cierres)] if v or not cierre_guion else f"👉 {cierre_guion.rstrip('.')}."
+    # cierre: el CTA escrito del guion, o el que dice el video, o uno de siempre; nada si el copy del cuerpo ya lo trae
+    if re.search(r"whatsapp|comenta|escr[ií]benos", del_cuerpo, re.I):
+        cierre = ""
+    elif cierre_escrito:
+        cierre = cierre_escrito
+    elif cierre_guion:
+        cierre = f"{['👉', '📲', '👇'][v % 3]} {cierre_guion.rstrip('.')}."
+    else:
+        cierres = CIERRE[publico or "B2C"]
+        cierre = cierres[v % len(cierres)]
     tags = tags or TAGS[publico or "B2C"]
     tags_l = tags.split()
-    ig = "\n\n".join(x for x in (primera, lista, cierre, tags) if x)
-    fb = "\n\n".join(x for x in (primera, lista, cierre, " ".join(tags_l[:3])) if x)
-    tt = "\n\n".join(x for x in (primera, f"✅ {buenos[0]}" if buenos else "", cierre, " ".join(tags_l[:5])) if x)
+    ig = "\n\n".join(x for x in (primera, lista, del_cuerpo, cierre, tags) if x)
+    fb = "\n\n".join(x for x in (primera, lista, del_cuerpo, cierre, " ".join(tags_l[:3])) if x)
+    tt = "\n\n".join(x for x in (primera, del_cuerpo or (f"✅ {buenos[0]}" if buenos else ""), cierre, " ".join(tags_l[:5])) if x)
     titulo = _cortar(re.sub(r"\s+", " ", gancho), 90)
     titulo = f"{titulo} #shorts" if len(titulo) <= 91 else titulo
-    yt = "\n\n".join(x for x in (gancho, lista, cierre, tags + " #shorts") if x)
+    yt = "\n\n".join(x for x in (gancho, lista, del_cuerpo, cierre, tags + " #shorts") if x)
     return {"instagram": ig, "facebook": fb, "tiktok": tt, "youtube_titulo": titulo, "youtube": yt, "fuente": fuente}
 
 

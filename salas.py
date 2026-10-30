@@ -56,8 +56,19 @@ def lunes_de_semana(codigo):
 
 # ---------- Dónde puede estar ya el archivo en esta PC ----------
 
+_espejos = {"cuando": 0, "lista": None}
+
+
 def espejos():
-    """Carpetas de la PC que tienen la misma forma que el proyecto de Drive."""
+    """Carpetas de la PC que tienen la misma forma que el proyecto de Drive (se miran cada 30 s: revisar 13 letras de
+    disco en cada pregunta hacía lenta la pantalla con la cola llena)."""
+    if _espejos["lista"] is not None and time.time() - _espejos["cuando"] < 30:
+        return list(_espejos["lista"])
+    _espejos.update(lista=_buscar_espejos(), cuando=time.time())
+    return list(_espejos["lista"])
+
+
+def _buscar_espejos():
     out = []
     for c in nucleo.config().get("carpetas_produccion") or []:
         if c:

@@ -33,13 +33,11 @@ def _norm(ruta):
 # ---------- Cuerpo y hook de cada video ----------
 
 def cuerpo_de(codigo, prod=""):
-    """S03-C1-H2-CTA1 → «prod · C1». Sin C<n> (nombres a mano como «SUPLEVET H3 1012» o «COMPONENTES (NUEVO)»),
+    """S03-C1-H2-CTA1 o P2H1 → «prod · C1». Sin cuerpo en el nombre («SUPLEVET H3 1012» o «COMPONENTES (NUEVO)»),
     el cuerpo es el nombre sin el hook ni lo que va entre paréntesis: así las versiones de un mismo video van juntas."""
     codigo = codigo or ""
-    m = re.search(r"(?:^|[-_ ])(C\d+)(?=[-_ ]|$)", codigo, re.I)
-    if m:
-        base = m.group(1).upper()
-    else:
+    base = nucleo.partes_codigo(codigo)[0]
+    if not base:
         base = re.sub(r"\(.*?\)", " ", codigo)
         base = re.sub(r"(?:^|(?<=[-_ ]))H\d+(?=[-_ ]|$)", " ", base, flags=re.I)
         base = re.sub(r"[-_ ]+", " ", base).strip(" -").upper()
@@ -47,8 +45,7 @@ def cuerpo_de(codigo, prod=""):
 
 
 def hook_de(codigo):
-    m = re.search(r"(?:^|[-_ ])(H\d+)(?=[-_ ]|$)", codigo or "", re.I)
-    return m.group(1).upper() if m else None
+    return nucleo.partes_codigo(codigo)[1]
 
 
 # ---------- Destinos (una fila por cuenta) ----------
@@ -159,7 +156,8 @@ def validar_ajustes(a):
     actual = ajustes()
     if _minutos(a.get("desde", actual["desde"])) >= _minutos(a.get("hasta", actual["hasta"])):
         raise ValueError("«Primer video» tiene que ser más temprano que «Último video»")
-    for k, nombre, lo, hi in (("por_dia", "Videos por cuenta al día", 1, 30), ("aire_cuerpo", "Días antes de repetir un cuerpo", 0, 30)):
+    for k, nombre, lo, hi in (("por_dia", "Videos por cuenta al día", 1, 30), ("aire_cuerpo", "Días antes de repetir un cuerpo", 0, 30),
+                              ("entre_cuentas", "Días entre cuentas para el mismo video", 0, 14)):
         if k in a:
             try:
                 a[k] = int(a[k])
@@ -170,8 +168,7 @@ def validar_ajustes(a):
     return a
 
 
-def horas(n):
-    """n horarios repartidos parejo entre «desde» y «hasta» (de 5 en 5 minutos)."""
+def _rango():
     a = ajustes()
     try:
         h0, h1 = _minutos(a["desde"]), _minutos(a["hasta"])
@@ -181,10 +178,19 @@ def horas(n):
         h0, h1 = h1, h0
     if h1 == h0:
         h1 = min(h0 + 60, 23 * 60 + 55)
-    if n <= 1:
-        return [f"{h0 // 60:02d}:{h0 % 60:02d}"]
-    paso = (h1 - h0) / (n - 1)
-    return [f"{m // 60:02d}:{m % 60:02d}" for m in (int(round((h0 + i * paso) / 5) * 5) for i in range(n))]
+    return h0, h1
+
+
+def horas(n, cuenta=0, cuentas=1):
+    """n horarios repartidos parejo entre «desde» y «hasta» (de 5 en 5 minutos). Con varias cuentas, cada una corre
+    un poco sus horas (la 2.ª unos minutos después de la 1.ª…): así no salen todas al mismo minuto ni se suben juntas."""
+    h0, h1 = _rango()
+    k = max(1, cuentas)
+    # el paso entre videos de una cuenta y el corrimiento entre cuentas, para que la última termine justo en «hasta»
+    # y ninguna cuenta caiga en la hora de otra: (n-1) pasos + (k-1)/k de paso = todo el rango
+    paso = (h1 - h0) / ((n - 1) + (k - 1) / k) if n > 1 or k > 1 else 60
+    off = min(cuenta, k - 1) * paso / k
+    return [f"{m // 60:02d}:{m % 60:02d}" for m in (int(round((h0 + off + i * paso) / 5) * 5) for i in range(n))]
 
 
 # ---------- El plan ----------
@@ -214,6 +220,7 @@ def planear(desde=None, dias=1, excluir=()):
     """Plan de «dias» días desde «desde» (hoy si no se dice). Lo que se sugiere un día cuenta como usado el siguiente."""
     a = ajustes()
     por_dia, aire = max(1, int(a["por_dia"])), max(0, int(a["aire_cuerpo"]))
+    entre = max(0, int(a.get("entre_cuentas", 1) or 0))
     hoy = datetime.now().strftime("%Y-%m-%d")
     dia0 = desde or hoy
     try:
@@ -245,8 +252,16 @@ def planear(desde=None, dias=1, excluir=()):
             veces[u["ruta"]] = veces.get(u["ruta"], 0) + 1
         hoy_red = {}       # red → videos de ese día en cualquier cuenta de esa red
         hoy_cuerpo = {}    # cuerpo → cuántas cuentas lo tienen ese día
+        en_red = {}        # (red, video) → [(cuenta, fecha)] para esperar «entre» días entre cuentas de la misma red
+        for u in usos:
+            en_red.setdefault((u["clave"].split(":")[0], u["ruta"]), []).append((u["clave"], u["fecha"]))
+
+        def espera(r, d, dia=dia, en_red=en_red):
+            """El video ya sale en otra cuenta de esta red a menos de «entre» días de este (antes o después)."""
+            return bool(entre) and any(c != d["clave"] and f and abs(_dias_entre(dia, f)) < entre
+                                       for c, f in en_red.get((d["red"], r), ()))
         plan = {}
-        for d in dests:
+        for i, d in enumerate(dests):
             mios = [u for u in usos if u["clave"] == d["clave"]]
             del_dia = [u for u in mios if u["fecha"][:10] == dia]
             for u in del_dia:
@@ -262,7 +277,7 @@ def planear(desde=None, dias=1, excluir=()):
                                 "piezas": [], "faltan": 0,
                                 "_usadas": {u["ruta"] for u in mios} | manuales | por_cuenta.get(d["clave"], set()) | excluir,
                                 "_cuerpos": {u["cuerpo"] for u in del_dia}, "_ultimo": ultimo,
-                                "_horas": [h for h in hs if h not in ocupadas and h > ahora],
+                                "_horas": [h for h in horas(por_dia, i, len(dests)) if h not in ocupadas and h > ahora],
                                 "_cupo": max(0, por_dia - len(del_dia))}
             pl = plan[d["clave"]]
             # hoy ya pasaron algunas horas: el cupo de hoy es lo que cabe en los horarios que quedan
@@ -288,7 +303,8 @@ def planear(desde=None, dias=1, excluir=()):
                 motivo += f" · ojo: este cuerpo salió acá hace {hace} día{'s' if hace != 1 else ''}"
             return {"hora": "", "fecha": "", "ruta": v["ruta"], "codigo": v["codigo"],
                     "cuerpo": v["cuerpo"], "hook": v["hook"], "produccion": v["produccion"],
-                    "portada": v["portada"], "archivos": v["archivos"], "motivo": motivo,
+                    "portada": v["portada"], "mini": v.get("mini"), "bajado": v.get("bajado"),
+                    "archivos": v["archivos"], "motivo": motivo,
                     "pronto": hace is not None and hace <= aire,
                     "gancho": (copys.generar(v, orden.index(d["clave"]) + int(dia[8:10]), transcribir=False)
                                .get("instagram") or "").split("\n")[0]}
@@ -299,7 +315,8 @@ def planear(desde=None, dias=1, excluir=()):
                 pl = plan[d["clave"]]
                 if len(pl["piezas"]) >= pl["_cupo"]:
                     continue
-                cands = [v for r, v in inv.items() if r not in pl["_usadas"] and v["cuerpo"] not in pl["_cuerpos"]]
+                cands = [v for r, v in inv.items() if r not in pl["_usadas"] and v["cuerpo"] not in pl["_cuerpos"]
+                         and not espera(r, d)]
                 if not cands:
                     continue
 
@@ -322,6 +339,7 @@ def planear(desde=None, dias=1, excluir=()):
                 veces[r] = veces.get(r, 0) + 1
                 hoy_red.setdefault(d["red"], set()).add(r)
                 hoy_cuerpo[v["cuerpo"]] = hoy_cuerpo.get(v["cuerpo"], 0) + 1
+                en_red.setdefault((d["red"], r), []).append((d["clave"], f"{dia}T00:00"))
                 usos.append(pieza["_uso"])
         # horas: repartidas parejo en el día aunque haya pocos videos (no todos en la mañana)
         for d in dests:
@@ -354,10 +372,14 @@ def planear(desde=None, dias=1, excluir=()):
             pl = plan[d["clave"]]
             pl["faltan"] = max(0, pl["_cupo"] - len(pl["piezas"]))
             sin_usar = [v for r, v in inv.items() if r not in pl["_usadas"]]
-            # por qué faltan: no quedan videos sin subir a esta cuenta, o los que quedan son de cuerpos que ya van ese día
-            pl["por_que_faltan"] = ("" if not pl["faltan"] else "cuerpos" if sin_usar else "videos")
+            otro_cuerpo = [v for v in sin_usar if v["cuerpo"] not in pl["_cuerpos"]]
+            # por qué faltan: no quedan videos sin subir a esta cuenta, los que quedan son de cuerpos que ya van ese día,
+            # o esos videos salen hace poco en otra cuenta de esta red
+            pl["por_que_faltan"] = ("" if not pl["faltan"] else "videos" if not sin_usar else "cuerpos" if not otro_cuerpo
+                                    else "cuentas")
+            pl["entre_cuentas"] = entre
             # otros videos que pueden ir en esta cuenta ese día, para «Cambiar por otro» sin tocar las demás cuentas
-            libres = sorted((v for v in sin_usar if v["cuerpo"] not in pl["_cuerpos"]),
+            libres = sorted((v for v in otro_cuerpo if not espera(_norm(v["archivos"][0]), d)),
                             key=lambda v: (_norm(v["archivos"][0]) in en_algun_lado, _reciente(v)))
             pl["reserva"] = [armar(v, d, pl) for v in libres[:6]]
             lista.append({k: v for k, v in pl.items() if not k.startswith("_")})
@@ -373,6 +395,9 @@ def planear(desde=None, dias=1, excluir=()):
         avisos.append("Algunas cuentas no llegan a su cupo: ya tienen (o se marcaron como subidos) todos los videos listos.")
     if "cuerpos" in razones:
         avisos.append("Algunas cuentas no llegan a su cupo: los videos que les quedan son de cuerpos que ya van ese día en esa cuenta.")
+    if "cuentas" in razones:
+        avisos.append(f"Algunas cuentas no llegan a su cupo: los videos que les quedan ya salen en otra cuenta de la misma red "
+                      f"a menos de {entre} día{'s' if entre != 1 else ''}. Puedes cambiarlo en Ajustes («Días entre cuentas»).")
     if any(x.get("por_hora") for x in salida[0]["destinos"]) and salida[0]["dia"] == hoy:
         avisos.append("Hoy ya pasaron algunos horarios: cada cuenta recibe solo los videos que caben en las horas que quedan.")
     return {"dias": salida, "por_dia": por_dia, "horas": hs, "destinos": todos, "ajustes": a,
@@ -398,7 +423,7 @@ def aceptar(items, aprobar=False):
         if p and it.get("clave") in dests and p["tipo"] == "video":
             v = orden.index(it["clave"]) + int((it.get("fecha") or "0000-00-00")[8:10])
             nivel = p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), produccion.cuerpo_de(p)).get("nivel")
-            copies[(it["clave"], _norm(it["ruta"]))] = copys.generar(p, v, nivel=nivel)
+            copies[(it["clave"], _norm(it["ruta"]))] = {**copys.generar(p, v, nivel=nivel), "variante": v}
     nuevas, trabadas, saltadas = [], [], 0
     with nucleo._candado:
         c = nucleo.cola()
@@ -415,8 +440,10 @@ def aceptar(items, aprobar=False):
             ya.add((d["clave"], llave))
             pub = produccion.nueva_desde_listo(p)   # con su semana (brief) y de dónde se baja en Drive
             pub.update(fecha=it["fecha"], sugerido=True, **({"cuerpo": p["cuerpo"]} if p.get("cuerpo") else {}))
-            if copies.get((d["clave"], _norm(it["ruta"]))):
-                copys.aplicar(pub, copies[(d["clave"], _norm(it["ruta"]))])
+            cp = copies.get((d["clave"], _norm(it["ruta"])))
+            if cp and cp.get("fuente"):
+                copys.aplicar(pub, cp)
+                pub["copy_variante"] = cp["variante"]   # «Escribir otro copy» sigue desde aquí, no repite el de otra cuenta
             for red, r in pub["redes"].items():
                 r["activa"] = red == d["red"]
                 if red == d["red"] and d["cuenta"]:

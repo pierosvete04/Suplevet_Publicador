@@ -1,3 +1,17 @@
+## 1.9.0 · Varias cuentas de verdad y copies que calzan con el video
+
+- **Conectar otra cuenta** ahora abre tu navegador (antes se abría dentro del Publicador y siempre volvía a entrar la misma cuenta). Ahí cambias de cuenta o cierras sesión, pulsas «Agregar cuenta» y la nueva aparece sola en Conexiones.
+- **Subir contenido con varias cuentas**: en cada red eliges una o varias cuentas (por ejemplo las tres de TikTok). El mismo video sale en cada una con su propio copy, un día después en la siguiente cuenta. Un video que ya está en la cola se puede volver a marcar para mandarlo a otra cuenta.
+- **Hoy reparte mejor entre cuentas**: el mismo video espera al menos un día antes de salir en otra cuenta de la misma red (se cambia en Ajustes › «Días entre cuentas»), y cada cuenta sale unos minutos corrida de las demás: ya no salen todas al mismo minuto.
+- **La Cola dice a qué cuenta va** cada pieza cuando una red tiene varias. Se puede buscar por cuenta.
+- **Copies desde el guion, mejor armados**: los videos «P2H1», «P6 H1»… se leen como cuerpo 2, cuerpo 6 (antes se les ponía el copy del cuerpo 1). Usa el texto del cuerpo y del CTA que el guionista dejó escritos en el guion, y los beneficios salen en frases enteras (antes salían cortados: «…cuidan su piel y»).
+- **Nunca el mismo cuerpo el mismo día en una cuenta**, también con los videos «P2H1» y «P2H2» (antes se contaban como cuerpos distintos).
+- **Publicadas**: si una cuenta falla (por ejemplo, venció su permiso), las otras de la misma red igual se ven, y dice cuál hay que reconectar.
+- Hoy ya no muestra videos rotos: los que siguen en Drive llevan su miniatura o una carpeta, y «Ver» los baja primero.
+- La pantalla se refresca mucho más rápido con la cola llena (de 1,6 s a 0,04 s con 130 piezas).
+- TikTok en modo Directo: no deja aprobar sin elegir quién puede ver el video, y si TikTok no aprobó la app explica qué hacer.
+- «Recoger ahora» en Métricas guarda los números de cada cuenta aunque todavía no haya nada publicado. Y si el instalado y el portable deben usar los mismos datos, basta un `usar_datos_de.txt` en datos/ con la carpeta que tiene las llaves.
+
 ## 1.8.2 · Las tres apps se ven igual
 
 - Las tres apps se ven y se sienten igual: el mismo bloque de estilo en la Sala de edición, la Sala de diseño y el Publicador.

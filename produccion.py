@@ -98,12 +98,11 @@ def bajar(ruta):
 
 
 def cuerpo_de(p):
-    """El cuerpo del brief (C1, C2…) de un video de Listos: el que dejó la Sala o el que dice su nombre."""
+    """El cuerpo del brief (C1, C2…) de un video de Listos: el que dejó la Sala o el que dice su nombre (C1 o P2H1)."""
     import re
     if re.fullmatch(r"C\d+", p.get("cuerpo") or ""):
         return p["cuerpo"]
-    m = re.search(r"(?:^|[-_ ])(C\d+)(?=[-_ ]|$)", p.get("codigo") or "", re.I) if p.get("tipo") == "video" else None
-    return m.group(1).upper() if m else None
+    return nucleo.partes_codigo(p.get("codigo"))[0] if p.get("tipo") == "video" else None
 
 
 def nueva_desde_listo(p, codigo=None):
@@ -162,37 +161,70 @@ def _fechas(n, modo, desde, por_dia, tipos):
     return [next(carruseles if t == "carrusel" else videos) for t in tipos]
 
 
+def _en_cola_por_cuenta():
+    """{(red, cuenta, video)} de lo que ya está en la cola (sin cuenta elegida = la cuenta por defecto de esa red)."""
+    cfg, out = nucleo.config(), set()
+    for p in nucleo.cola()["publicaciones"]:
+        for red, r in p["redes"].items():
+            if r.get("activa") and r.get("estado") != "error":
+                for a in [*p.get("archivos", [])[:1], *(f"drive:{x}" for x in (p.get("drive") or [])[:1])]:
+                    out.add((red, r.get("cuenta") or cfg.get(f"{red}_cuenta"), os.path.normcase(a)))
+    return out
+
+
 def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=None, aprobar=False):
-    """Pasa a la cola las piezas elegidas, con las redes y cuentas que marcaste. Devuelve lo que entró."""
+    """Pasa a la cola las piezas elegidas, con las redes y cuentas que marcaste. Devuelve lo que entró.
+    cuentas: {red: id} o {red: [id, id…]}. Con varias cuentas en una red, el mismo video va a cada una en su propia
+    publicación, corrida «entre_cuentas» días (lo mismo que en Hoy) y unos minutos, y con otra variante del copy."""
     if not rutas:
         raise ValueError("Elige al menos un video")
     if not redes:
         raise ValueError("Elige al menos una red")
+    cfg = nucleo.config()
+    por_red = {red: [x for x in ((cuentas or {}).get(red) if isinstance((cuentas or {}).get(red), list)
+                                 else [(cuentas or {}).get(red)]) if x] or [None] for red in redes}
+    rondas = max(len(v) for v in por_red.values())
+    entre = max(0, int(cfg["sugeridor"].get("entre_cuentas", 1) or 0))
     todas = {p["ruta"]: p for prod in listos(forzar=True)["producciones"] for p in prod["piezas"]}
-    elegidas = [todas[r] for r in rutas if r in todas and not todas[r]["en_cola"]]
+    elegidas = [todas[r] for r in rutas if r in todas]
     if not elegidas:
-        raise ValueError("Esos videos ya están en la cola")
+        raise ValueError("Esos videos ya no están en Subir contenido")
     fechas = _fechas(len(elegidas), modo, desde, por_dia, [p["tipo"] for p in elegidas])
     import copys   # el copy lo escribe el publicador desde el guion; el .txt de la Sala queda de respaldo
-    escritos = {p["ruta"]: copys.generar(p, nivel=p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), cuerpo_de(p)).get("nivel"))
-                for p in elegidas if p["tipo"] == "video"}
-    nuevas, trabadas = [], []
+    escritos = {(p["ruta"], j): copys.generar(p, j, nivel=p.get("nivel") or nucleo.datos_de_semana(p.get("semana"), cuerpo_de(p)).get("nivel"))
+                for p in elegidas if p["tipo"] == "video" for j in range(rondas)}
+    nuevas, trabadas, repetidas = [], [], 0
     with nucleo._candado:
         c = nucleo.cola()
-        codigos = {p["codigo"] for p in c["publicaciones"]}
-        for p, fecha in zip(elegidas, fechas):
-            codigo = p["codigo"] if p["codigo"] not in codigos else f"{p['proyecto'].split()[0]}-{p['codigo']}"
-            codigos.add(codigo)
+        ya = _en_cola_por_cuenta()
+        # el mismo nombre en dos producciones distintas («C1 H1» de P03 y de P05) lleva delante el proyecto;
+        # el mismo video en otra cuenta conserva su nombre
+        codigos = {x["codigo"]: os.path.normcase((x.get("archivos") or [""])[0]) for x in c["publicaciones"]}
+        for (p, fecha), j in ((x, j) for x in zip(elegidas, fechas) for j in range(rondas)):
+            # la vuelta j lleva la cuenta j de cada red (las redes con una sola cuenta van solo en la primera);
+            # una cuenta que ya tiene este video en la cola no lo vuelve a recibir
+            posibles = nucleo.REDES_VIDEO if p["tipo"] == "video" else nucleo.REDES_CARRUSEL
+            llevar = {red: cs[j] for red, cs in por_red.items() if j < len(cs) and red in posibles
+                      and (red, cs[j] or cfg.get(f"{red}_cuenta"), os.path.normcase(p["archivos"][0])) not in ya}
+            repetidas += sum(1 for red, cs in por_red.items() if j < len(cs) and red in posibles and red not in llevar)
+            if not llevar:
+                continue
+            codigo = p["codigo"]
+            if codigos.get(codigo, os.path.normcase(p["archivos"][0])) != os.path.normcase(p["archivos"][0]):
+                codigo = f"{p['proyecto'].split()[0]}-{codigo}"
+            codigos[codigo] = os.path.normcase(p["archivos"][0])
             pub = nueva_desde_listo(p, codigo)
-            pub.pop("dia", None)
-            pub.pop("_desde", None)
             pub["fecha"] = fecha
-            if escritos.get(p["ruta"]):
-                copys.aplicar(pub, escritos[p["ruta"]])
+            if j and modo != "ahora":   # la otra cuenta: «entre_cuentas» días después y unos minutos corrida
+                f = datetime.strptime(fecha, "%Y-%m-%dT%H:%M") + timedelta(days=entre * j, minutes=10 * j)
+                pub["fecha"] = f.strftime("%Y-%m-%dT%H:%M")
+            if escritos.get((p["ruta"], j)):
+                copys.aplicar(pub, escritos[(p["ruta"], j)])
+                pub["copy_variante"] = j
             for red, r in pub["redes"].items():
-                r["activa"] = red in redes
-                if (cuentas or {}).get(red):
-                    r["cuenta"] = cuentas[red]
+                r["activa"] = red in llevar
+                if llevar.get(red):
+                    r["cuenta"] = llevar[red]
             if aprobar:
                 pub["aprobado"] = True
                 prohibidas = [a for a in nucleo.revisar_copy(pub) if "pide evitar" in a]
@@ -201,9 +233,12 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
                     trabadas.append(codigo)
             c["publicaciones"].append(pub)
             nuevas.append(pub)
+        if not nuevas:
+            raise ValueError("Esos videos ya están en la cola para esas cuentas")
         nucleo.guardar_cola(c)
     _memo["datos"] = None
     nucleo.anotar(f"Desde producción: {len(nuevas)} piezas a la cola para {', '.join(redes)} · {modo}"
+                  + (f" · {repetidas} ya estaban en esa cuenta" if repetidas else "")
                   + (f" · sin aprobar por palabras prohibidas: {trabadas}" if trabadas else ""))
     import threading
     for pub in nuevas:   # los videos de Drive se van bajando ya, para que estén listos a su hora
@@ -212,7 +247,7 @@ def a_la_cola(rutas, redes, cuentas=None, modo="repartir", desde=None, por_dia=N
     if modo == "ahora" and aprobar:
         for pub in nuevas:
             if pub.get("aprobado"):
-                for red in redes:
-                    if red in pub["redes"]:
+                for red, r in pub["redes"].items():
+                    if r.get("activa"):
                         threading.Thread(target=nucleo.publicar, args=(pub["id"], red), daemon=True).start()
-    return {"nuevas": len(nuevas), "trabadas": trabadas, "fechas": [n["fecha"] for n in nuevas]}
+    return {"nuevas": len(nuevas), "trabadas": trabadas, "repetidas": repetidas, "fechas": [n["fecha"] for n in nuevas]}

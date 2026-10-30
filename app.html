@@ -247,6 +247,7 @@ dialog.pop-notifs::backdrop, :root[data-tema] dialog.pop-notifs::backdrop { back
 .fila-p:last-child{border-bottom:0}.fila-p:hover{background:rgba(61,139,255,.05)}
 .fila-p.on{background:rgba(61,139,255,.1);box-shadow:inset 3px 0 0 #3d8bff}
 .mini-img{width:44px;height:64px;border-radius:6px;object-fit:cover;flex:none;background:#000}
+.mini-drive{display:grid;place-items:center;background:var(--superficie-2);color:var(--suave)}.mini-drive svg{width:18px;height:18px;opacity:.7}
 .fila-p .c{flex:1}.fila-p .c b{font:600 12px var(--mono);color:var(--celeste)}
 .fila-p .c p{margin:2px 0 0;color:var(--suave);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fila-p .meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
@@ -333,6 +334,10 @@ dialog.pop-notifs::backdrop, :root[data-tema] dialog.pop-notifs::backdrop { back
 .bl-c{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--suave)}
 .bl-c input,.bl-c select,.bl-g select{min-height:32px;padding:4px 8px}
 .bl-fin{margin-left:auto}
+.bl-nota{flex-basis:100%;margin:0;font-size:12px}
+.cuenta-t{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--celeste)}
+.bl-t .red-ic{vertical-align:middle}
+.est-c.boton{border:0;cursor:pointer;font-family:inherit}.est-c.boton:hover{filter:brightness(1.2)}
 .espacio-barra{height:190px}
 @media (max-width:640px){.espacio-barra{height:330px}}
 @media (max-width:640px){.rej-listos{grid-template-columns:repeat(2,minmax(0,1fr))}.barra-l-in{padding:10px 12px;gap:10px;max-height:60vh;overflow:auto}.bl-g{width:100%}.bl-g:nth-child(2){flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.bl-fin{margin-left:0;flex-direction:column;align-items:stretch}.barra-l .vista button{white-space:nowrap}.bl-c input[type=date]{min-width:140px}}
@@ -605,7 +610,11 @@ const redesMini=l=>`<span class="redes-mini">${l.map(k=>redIc(k)).join("")}</spa
 function datosCola(p){
   const act=Object.entries(p.redes).filter(([,r])=>r.activa),ks=act.map(([k])=>k);
   const est=act.some(([,r])=>REINTENTAR.includes(r.estado))?["err","Con error"]:act.length&&act.every(([,r])=>["publicado","simulado"].includes(r.estado))?["pub","Publicada"]:p.aprobado?["apr","Aprobada"]:["rev","Por revisar"];
-  return{p,redes:ks,clase:p.tipo=="video"?"video":"post",fmt:p.formato||(p.tipo=="video"?"9:16":"1:1"),est,copy:act[0]?.[1].copy||""}}
+  /* con varias cuentas en una red, a qué cuenta va (si no, sobra: hay una sola) */
+  const cuentas=act.filter(([k])=>(E.conexiones[k]?.cuentas||[]).length>1).map(([k,r])=>nomCuenta(k,r)).filter(Boolean).join(" · ");
+  return{p,redes:ks,clase:p.tipo=="video"?"video":"post",fmt:p.formato||(p.tipo=="video"?"9:16":"1:1"),est,copy:act[0]?.[1].copy||"",cuentas}}
+function nomCuenta(k,r){const cs=E.conexiones[k]?.cuentas||[];return r.cuenta_nombre||(cs.find(c=>c.id==r.cuenta)||cs.find(c=>c.defecto)||cs[0])?.nombre||""}
+const tagCuenta=x=>x.cuentas?`<span class="tag cuenta-t" title="Cuenta a la que va">${esc(x.cuentas)}</span>`:"";
 function pasaF(x,porLista){return(F.red=="todas"||(porLista?x.redes.includes(F.red):x.red==F.red))&&(F.clase=="todas"||x.clase==F.clase)&&(F.fmt=="todos"||(x.fmt||x.formato)==F.fmt)}
 function barraFiltros(lista,porLista,extra=""){
   const n=(k,v)=>lista.filter(x=>{const g=F[k];F[k]=v;const ok=pasaF(x,porLista);F[k]=g;return ok}).length;
@@ -719,7 +728,7 @@ function tarjetaListo(x){
   const media=x.portada?`<img src="${arc(x.portada)}" alt="" loading="lazy">`:x.mini?`<img src="/mini?rel=${encodeURIComponent(x.mini)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'en-drive',textContent:'Video final en Drive'}))">`:x.bajado?`<video src="${arc(x.archivos[0])}#t=1" muted preload="metadata"></video>`
    :`<span class="en-drive">${ic("carpeta")}<span>En Drive</span><small>Se baja al verlo o al publicarlo</small></span>`;
   return`<div class="listo ${on?"on":""} ${ya?"ya":""}" style="aspect-ratio:${x.tipo=="video"?"9/16":"4/5"}">
-   <button class="listo-caja" onclick="${ya?`abrirEditor('${ya.id}')`:`marcar('${encodeURIComponent(x.ruta)}')`}" aria-pressed="${on}" aria-label="${ya?"Abrir en la cola":"Marcar"} ${esc(x.codigo)}">${media}</button>
+   <button class="listo-caja" onclick="marcar('${encodeURIComponent(x.ruta)}')" aria-pressed="${on}" aria-label="Marcar ${esc(x.codigo)}${ya?" (ya está en la cola: puedes mandarlo a otra cuenta)":""}">${media}</button>
    <span class="marca-sel" aria-hidden="true">${on?ic("check"):""}</span>
    ${x.tipo=="carrusel"?`<span class="tipo-l">${x.clase=="post"?"Post":"▣ "+x.archivos.length}</span>`:""}
    <button class="jugar-l" onclick="verListo('${encodeURIComponent(x.ruta)}')" aria-label="Ver ${esc(x.codigo)}" title="Ver">${x.tipo=="video"?"▶":ic("ojo")}</button>
@@ -727,7 +736,7 @@ function tarjetaListo(x){
     <span class="origen-l">${x.tipo=="video"?`Video final · ${esc(x.carpeta||"V.FINALES")}`:`${x.clase=="post"?"Post":"Carrusel"} · ${esc(x.semana||"")}${x.dia?" · "+["","lun","mar","mié","jue","vie","sáb","dom"][x.dia]:""}`}</span>
     ${x.tipo=="video"&&x.posts?.length?`<span class="match-l" title="${esc(x.posts.map(z=>z.titulo||z.codigo).join(", "))}">🔗 Tiene post: ${esc(x.posts[0].titulo||x.posts[0].codigo)}${x.posts.length>1?` +${x.posts.length-1}`:""}</span>`:""}
     ${x.tipo!="video"?(x.va_con?.length?`<span class="match-l" title="${esc(x.va_con_como+": "+x.va_con.map(z=>z.codigo).join(", "))}">🔗 Va con: ${esc(x.va_con[0].codigo)}${x.va_con.length>1?` +${x.va_con.length-1}`:""}</span>`:`<span class="origen-l">Sin video asociado</span>`):""}
-    ${ya?`<span class="est-c ${ya.aprobado?"apr":"rev"}">En la cola · ${esc(cuando({fecha:ya.fecha}))}</span>`:`<span>${x.copy&&Object.keys(x.copy).length?"Con copy":"Sin copy"} · ${x.tamano_mb} MB</span>`}</div></div>`}
+    ${ya?`<button class="est-c boton ${ya.aprobado?"apr":"rev"}" onclick="abrirEditor('${ya.id}')" title="Abrir en la cola. Para mandarlo a otra cuenta, márcalo de nuevo.">En la cola · ${esc(cuando({fecha:ya.fecha}))}</button>`:`<span>${x.copy&&Object.keys(x.copy).length?"Con copy":"Sin copy"} · ${x.tamano_mb} MB</span>`}</div></div>`}
 function marcar(r){r=decodeURIComponent(r);selL.has(r)?selL.delete(r):selL.add(r);listos()}
 function marcarProd(n,si){const prod=LIS.producciones.find(p=>p.nombre==decodeURIComponent(n));piezasVisibles(prod).filter(x=>!x.en_cola).forEach(x=>si?selL.add(x.ruta):selL.delete(x.ruta));listos()}
 async function verListo(r){r=decodeURIComponent(r);let x=LIS.producciones.flatMap(p=>p.piezas).find(y=>y.ruta==r);
@@ -742,7 +751,9 @@ function pintarBarra(){
   b.innerHTML=`<div class="barra-l-in">
    <div class="bl-g"><b>${selL.size} ${selL.size==1?"elegido":"elegidos"}</b><button class="btn fant chico" onclick="selL.clear();listos()">Quitar selección</button></div>
    <div class="bl-g"><span class="bl-t">Redes</span>${Object.keys(REDES).map(k=>`<button class="ch ${OPC.redes.includes(k)?"on":""}" aria-pressed="${OPC.redes.includes(k)}" onclick="tRed('${k}')" title="${E.conexiones[k]?.listo?"":"Falta conectar"}">${redIc(k,E.conexiones[k]?.listo?"":"apagada")}${REDES[k][1]}</button>`).join("")}
-    ${Object.keys(REDES).filter(k=>OPC.redes.includes(k)&&cs(k).length>1).map(k=>`<select onchange="OPC.cuentas.${k}=this.value" aria-label="${QUE_CUENTA[k]} de ${REDES[k][1]}">${cs(k).map(c=>`<option value="${esc(c.id)}" ${c.id==(OPC.cuentas[k]||(cs(k).find(z=>z.defecto)||cs(k)[0]).id)?"selected":""}>${REDES[k][0]} · ${esc(c.nombre)}</option>`).join("")}</select>`).join("")}</div>
+    </div>
+   ${Object.keys(REDES).filter(k=>OPC.redes.includes(k)&&cs(k).length>1).map(k=>`<div class="bl-g"><span class="bl-t">${redIc(k)} ${QUE_CUENTA[k]=="Canal"?"Canales":QUE_CUENTA[k]=="Página"?"Páginas":"Cuentas"}</span>${cs(k).map(c=>{const on=cuentasL(k).includes(c.id);return`<button class="ch ${on?"on":""}" aria-pressed="${on}" onclick="tCuenta('${k}','${esc(c.id)}')">${esc(c.nombre)}</button>`}).join("")}</div>`).join("")}
+   ${multiL()?`<p class="suave bl-nota">El mismo video sale en cada cuenta elegida con su propio copy, ${(E.config.sugeridor.entre_cuentas??1)?`${E.config.sugeridor.entre_cuentas??1} ${(E.config.sugeridor.entre_cuentas??1)==1?"día":"días"} después en la siguiente cuenta`:"el mismo día, unos minutos después en la siguiente cuenta"} (lo cambias en Hoy › Ajustes).</p>`:""}
    <div class="bl-g"><span class="bl-t">Cuándo</span><div class="vista" style="margin:0">${[["repartir","Repartir en la semana"],["ahora","Publicar ahora"]].map(([k,t])=>`<button class="${OPC.modo==k?"on":""}" onclick="OPC.modo='${k}';pintarBarra()">${t}</button>`).join("")}</div>
     ${OPC.modo=="repartir"?`<label class="bl-c">Desde <input type="date" value="${OPC.desde}" min="${fechaLocal(new Date())}" onchange="OPC.desde=this.value||manana();pintarBarra()"></label>
      <label class="bl-c"><select onchange="OPC.por_dia=+this.value;pintarBarra()">${[1,2,3,4,5].map(n=>`<option value="${n}" ${OPC.por_dia==n?"selected":""}>${n} por día</option>`).join("")}</select></label>`:""}
@@ -754,11 +765,15 @@ function resumenPlan(hayCarr){const n=selL.size,red=OPC.redes.map(k=>REDES[k][1]
   const f=x=>cap(x.toLocaleDateString("es-PE",{weekday:"short",day:"numeric"}).replace(".",""));
   return`${f(d)}${dias>1?` a ${f(fin)}`:""} · ${OPC.por_dia} por día · ${red}${hayCarr?" (los carruseles solo van a IG y FB)":""}${OPC.aprobar?" · aprobados":""}`}
 function tRed(k){const i=OPC.redes.indexOf(k);i<0?OPC.redes.push(k):OPC.redes.splice(i,1);pintarBarra()}
+/* cuentas elegidas de una red (al empezar, la de por defecto); se puede elegir más de una */
+function cuentasL(k){const cs=E.conexiones[k]?.cuentas||[];if(!OPC.cuentas[k])OPC.cuentas[k]=cs.length?[(cs.find(c=>c.defecto)||cs[0]).id]:[];return OPC.cuentas[k]}
+function tCuenta(k,id){const l=cuentasL(k),i=l.indexOf(id);if(i<0)l.push(id);else if(l.length>1)l.splice(i,1);else return toast("Deja al menos una cuenta, o apaga la red","mal");pintarBarra()}
+const multiL=()=>OPC.redes.some(k=>(E.conexiones[k]?.cuentas||[]).length>1&&cuentasL(k).length>1);
 async function pasarALaCola(){
   if(!OPC.redes.length){toast("Elige al menos una red","mal");return}
   if(OPC.modo=="ahora"&&OPC.aprobar&&!E.config.simular&&!await preguntar(`¿Publicar ${selL.size} ahora?`,`Se suben de verdad a ${OPC.redes.map(k=>REDES[k][1]).join(", ")} en este momento.`,"Publicar ahora","acento"))return;
   const r=await api("/api/listos/a_la_cola",{rutas:[...selL],redes:OPC.redes,cuentas:OPC.cuentas,modo:OPC.modo,desde:OPC.desde,por_dia:OPC.por_dia,aprobar:OPC.aprobar});
-  toast(`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.trabadas.length?`. Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""),r.trabadas.length?"mal":"ok");
+  toast(`${r.nuevas} ${r.nuevas==1?"pieza pasó":"piezas pasaron"} a la cola`+(r.repetidas?` (${r.repetidas} ya estaban en esa cuenta)`:"")+(r.trabadas.length?`. Sin aprobar por palabras prohibidas: ${r.trabadas.join(", ")}`:""),r.trabadas.length?"mal":"ok");
   selL.clear();$("#barra-l")?.remove();await cargar(true);traerListos(true)}
 
 /* ---------- Hoy: qué subir a cada cuenta ---------- */
@@ -800,7 +815,7 @@ function hoy(){
       h+=`<div class="caja sug-d"><div class="sug-cab">${redIc(x.red)}<div style="flex:1"><b>${esc(x.nombre)}</b><span class="suave">${n} de ${cupo} videos${x.por_hora?` · quedan ${x.horas_libres} ${x.horas_libres==1?"horario":"horarios"} ${d.dia==hoyF()?"hoy":"ese día"}`:""}${x.ya.length?` · ${x.ya.length} ya en la cola`:""}${x.carrusel?" · 1 carrusel":""}</span></div></div>
        ${filas.map(p=>filaS(x,p)).join("")}
        ${x.ya.length?`<div class="sug-pie">Ya en la cola: ${x.ya.map(y=>`${y.fecha.slice(11,16)} ${esc(y.codigo)}`).join(" · ")}</div>`:""}
-       ${x.faltan?`<div class="sug-pie falta">Faltan ${x.faltan}: ${x.por_que_faltan=="videos"?"ya no quedan videos sin subir a esta cuenta.":x.por_que_faltan=="cuerpos"?"los videos que quedan son de cuerpos que ya van ese día en esta cuenta.":"no quedan videos de otros cuerpos para esta cuenta."}</div>`:""}
+       ${x.faltan?`<div class="sug-pie falta">Faltan ${x.faltan}: ${x.por_que_faltan=="videos"?"ya no quedan videos sin subir a esta cuenta.":x.por_que_faltan=="cuerpos"?"los videos que quedan son de cuerpos que ya van ese día en esta cuenta.":x.por_que_faltan=="cuentas"?`los videos que quedan ya salen en otra cuenta de ${REDES[x.red][1]} a menos de ${x.entre_cuentas} ${x.entre_cuentas==1?"día":"días"}.`:"no quedan videos de otros cuerpos para esta cuenta."}</div>`:""}
        ${!filas.length&&!x.ya.length&&!x.faltan?`<div class="sug-pie">Nada para este día.</div>`:""}</div>`;
     }
     if(sinPlan.length)h+=`<div class="caja sug-d"><div class="sug-pie">Guarda los ajustes para ver qué subir a ${sinPlan.map(z=>esc(z.nombre)).join(", ")}.</div></div>`;
@@ -810,7 +825,11 @@ function hoy(){
   barraS();
 }
 function filaS(x,p){const i=SIDX.push({x,p})-1,off=SOP.quitados.has(llaveS(x.clave,p)),carr=p.tipo=="carrusel";
-  const img=p.portada?`<img class="mini-img" src="${arc(p.portada)}" alt="" loading="lazy">`:`<video class="mini-img" src="${arc(p.archivos[0])}#t=1" muted preload="metadata"></video>`;
+  /* los videos que siguen en Drive no tienen archivo en la PC: la miniatura de Drive o una caja, nunca un video roto */
+  const foto=s=>`<img class="mini-img" src="${s}" alt="" loading="lazy" onerror="this.style.opacity=.15">`;
+  const img=p.portada?foto(arc(p.portada)):p.mini?foto("/mini?rel="+encodeURIComponent(p.mini)):carr?foto(arc(p.archivos[0]))
+   :p.bajado!==false?`<video class="mini-img" src="${arc(p.archivos[0])}#t=1" muted preload="metadata"></video>`
+   :`<span class="mini-img mini-drive" title="Está en Drive: se baja al verlo o al publicarlo">${ic("carpeta")}</span>`;
   return`<div class="sug-f ${off?"off":""}"><input type="checkbox" ${off?"":"checked"} onchange="tS(${i})" aria-label="Subir ${esc(p.codigo)} a ${esc(x.nombre)}">
    <span class="hora">${p.hora}</span>${img}
    <div class="c"><b title="${esc(p.codigo)}">${esc(p.codigo)}</b>
@@ -831,17 +850,20 @@ function cambiarS(i){const{x,p}=SIDX[i];
   SOP.quitados.delete(llaveS(x.clave,p));x.piezas[x.piezas.indexOf(p)]=n;hoy()}
 async function yaSalioS(i){const{x,p}=SIDX[i];if(!await preguntar("¿Ya subiste este video?",`${p.codigo} ya no se va a sugerir para ${x.nombre}. En las demás cuentas puede seguir saliendo.`,"Sí, ya salió","prim"))return;
   await api("/api/sugerencias/ya_salio",{ruta:p.archivos[0],clave:x.clave});toast(`Listo, no se sugiere más en ${x.nombre}`,"ok");traerSug()}
-function verS(i){const p=SIDX[i].p,v=p.tipo!="carrusel";
+async function verS(i){const p=SIDX[i].p,v=p.tipo!="carrusel";
+  if(v&&p.bajado===false){toast("Bajando de Drive…");try{await api("/api/listos/bajar",{ruta:p.ruta});p.bajado=true}catch(e){return}}
   vis={red:SIDX[i].x.red,cuenta:SIDX[i].x.nombre,codigo:p.codigo,tipo:v?"Video":"Carrusel",formato:v?"9:16":"4:5",fotos:v?[]:p.archivos.map(arc),met:{},
     texto:v?(p.gancho?`${p.gancho}\n\n(Es la primera línea del copy. El copy entero se escribe al pasarlo a la cola.)`:"El copy se escribe al pasarlo a la cola."):"",fecha:p.fecha,video:v?arc(p.archivos[0]):null};
   visI=0;pintarVisor();$("#visor").classList.add("on");document.addEventListener("keydown",teclaVisor)}
-const leerAj=()=>({por_dia:+$("#aj-n").value,desde:$("#aj-d").value,hasta:$("#aj-h").value,aire_cuerpo:+$("#aj-a").value});
+const leerAj=()=>({por_dia:+$("#aj-n").value,desde:$("#aj-d").value,hasta:$("#aj-h").value,aire_cuerpo:+$("#aj-a").value,entre_cuentas:+$("#aj-e").value});
 function ajustesS(){const a={...SUG.ajustes,...(ajBorr||{})};
   return`<div class="caja" data-borrador><h3>Ajustes de las sugerencias</h3>
    <div class="aj-s"><label class="campo">Videos por cuenta al día<select id="aj-n">${Array.from({length:15},(_,k)=>k+1).map(n=>`<option ${a.por_dia==n?"selected":""}>${n}</option>`).join("")}</select></label>
     <label class="campo">Primer video<input id="aj-d" type="time" value="${esc(a.desde)}" required></label>
     <label class="campo">Último video<input id="aj-h" type="time" value="${esc(a.hasta)}" required></label>
-    <label class="campo">Días antes de repetir un cuerpo en la misma cuenta<select id="aj-a">${[0,1,2,3,4,5,7].map(n=>`<option ${a.aire_cuerpo==n?"selected":""}>${n}</option>`).join("")}</select></label></div>
+    <label class="campo">Días antes de repetir un cuerpo en la misma cuenta<select id="aj-a">${[0,1,2,3,4,5,7].map(n=>`<option ${a.aire_cuerpo==n?"selected":""}>${n}</option>`).join("")}</select></label>
+    <label class="campo">Días entre cuentas para el mismo video<select id="aj-e">${[0,1,2,3,4,5,7].map(n=>`<option value="${n}" ${(a.entre_cuentas??1)==n?"selected":""}>${n==0?"0 · puede salir el mismo día":n==1?"1 · nunca el mismo día":n+" días"}</option>`).join("")}</select></label></div>
+   <p class="suave" style="margin:8px 0 0">Si tienes varias cuentas en una red (tres de TikTok, dos de YouTube…), el mismo video espera estos días antes de salir en la otra cuenta. Cada cuenta, además, sale unos minutos corrida de las demás.</p>
    <div class="bl-t" style="margin:14px 0 6px">Cuentas que reciben sugerencias</div>
    <div class="fila" style="gap:6px">${SUG.destinos.map(d=>`<button class="ch ${d.activo?"on":""}" aria-pressed="${d.activo}" onclick="tDest('${esc(d.clave)}')">${redIc(d.red,d.listo?"":"apagada")}${esc(d.nombre)}</button>`).join("")}</div>
    <p class="suave" style="margin:10px 0 0">¿Faltan cuentas? Agrega las otras cuentas de TikTok y canales de YouTube en <a href="#" onclick="ir('conexiones');return false">Conexiones</a>. Cada una aparece aquí sola.</p>
@@ -873,7 +895,7 @@ async function aceptarS(){if(pasandoS)return;const el=elegidasS();if(!el.length)
 const todasCola=()=>E.cola.publicaciones.length;
 function cola(){
   const todas=E.cola.publicaciones.map(datosCola).sort((a,b)=>(a.p.fecha||"9").localeCompare(b.p.fecha||"9"));
-  const conBusca=todas.filter(x=>!busca||(x.p.codigo+" "+(x.p.dolor||"")+" "+x.copy).toLowerCase().includes(busca)),l=conBusca.filter(x=>pasaF(x,1));
+  const conBusca=todas.filter(x=>!busca||(x.p.codigo+" "+(x.p.dolor||"")+" "+x.cuentas+" "+x.copy).toLowerCase().includes(busca)),l=conBusca.filter(x=>pasaF(x,1));
   const vistas=`<div class="vista" role="tablist">${[["lista","Lista"],["tablero","Tablero"],["calendario","Calendario"]].map(([k,t])=>`<button role="tab" aria-selected="${modo==k}" class="${modo==k?"on":""}" onclick="modo='${k}';guardarLocal('modo','${k}');cola()">${ic(k)}${t}</button>`).join("")}</div>`;
   const porRev=todas.filter(x=>x.est[0]=="rev").length;
   let h=`<div class="titulo-pag"><div><h1>Cola</h1><p>Revisa, aprueba y deja que cada pieza salga sola a su hora.${todas.length?` <b>${porRev} por revisar</b> de ${todas.length} en la cola.`:""}</p></div>
@@ -892,7 +914,7 @@ function vLista(l){
   if(!l.find(x=>x.p.id==sel))sel=l[0].p.id;const x=l.find(y=>y.p.id==sel),p=x.p,k=x.redes[0];
   return`<div class="tres"><div class="lista">${l.map(y=>`<div class="fila-p ${y.p.id==sel?"on":""}" onclick="elegirFila('${y.p.id}')" tabindex="0" onkeydown="if(event.key=='Enter')abrirEditor('${y.p.id}')">
     ${portada(y.p)}<div class="c"><b>${esc(y.p.codigo)}</b><p>${esc(y.copy)||"Sin copy"}</p>
-    <div class="fila" style="gap:6px;margin-top:4px">${redesMini(y.redes)}<span class="tag">${y.fmt}</span>${y.p.nivel?`<span class="chip ${y.p.nivel}">${y.p.nivel}</span>`:""}</div></div>
+    <div class="fila" style="gap:6px;margin-top:4px">${redesMini(y.redes)}${tagCuenta(y)}<span class="tag">${y.fmt}</span>${y.p.nivel?`<span class="chip ${y.p.nivel}">${y.p.nivel}</span>`:""}</div></div>
     <div class="meta"><span class="est-c ${y.est[0]}">${y.est[1]}</span><span class="etq">${esc(cuando(y.p))}</span></div></div>`).join("")}</div>
    <aside class="prev-fija caja"><div class="tel"><div class="pantalla ${p.tipo=="video"?"video":""}">${p.tipo=="video"?`<video src="${arc(p.archivos[0])}" controls playsinline preload="metadata"></video>`:`<div class="carr">${p.archivos.map(a=>`<img src="${arc(a)}" alt="">`).join("")}</div>`}
      ${k?`<div class="marca-red">${redIc(k)}</div>`:""}<div class="capa"><b>@suplevet</b><div class="texto">${esc(x.copy)}</div></div></div></div>
@@ -906,7 +928,7 @@ function elegirFila(id){if(matchMedia("(max-width:900px)").matches)return abrirE
 function vTablero(l){
   return`<div class="tablero">${[["rev","Por revisar"],["apr","Aprobadas"],["pub","Publicadas"],["err","Con error"]].map(([k,t])=>{const c=l.filter(x=>x.est[0]==k);
    return`<div class="col"><h3>${t}<span class="est-c ${k}">${c.length}</span></h3>${c.map(x=>`<div class="kan" onclick="abrirEditor('${x.p.id}')">${portada(x.p)}
-    <div class="t"><b>${esc(x.p.codigo)}</b><p>${esc(x.copy)||"Sin copy"}</p><div class="pie-k">${redesMini(x.redes)}<span class="tag">${x.fmt}</span><span class="etq">${esc(cuando(x.p))}</span></div></div></div>`).join("")||'<p class="suave" style="text-align:center;margin:20px 0">Vacío</p>'}
+    <div class="t"><b>${esc(x.p.codigo)}</b><p>${esc(x.copy)||"Sin copy"}</p><div class="pie-k">${redesMini(x.redes)}${tagCuenta(x)}<span class="tag">${x.fmt}</span><span class="etq">${esc(cuando(x.p))}</span></div></div></div>`).join("")||'<p class="suave" style="text-align:center;margin:20px 0">Vacío</p>'}
     ${k=="rev"&&c.length?`<button class="btn sec chico" style="width:100%" onclick="aprobarVarias(${JSON.stringify(c.map(x=>x.p.id)).replace(/"/g,"'")})">${ic("check")}Aprobar las ${c.length}</button>`:""}</div>`}).join("")}</div>`}
 async function aprobarVarias(ids){if(!await preguntar(`¿Aprobar ${ids.length} piezas?`,"Saldrán solas a su hora mientras el publicador esté abierto.","Aprobar","ok"))return;
   let n=0,tr=[];for(const id of ids){const p=E.cola.publicaciones.find(x=>x.id==id);if(p&&faltaAprobar(p.redes,p.fecha)){tr.push(p.codigo);continue}
@@ -924,7 +946,7 @@ function vCalendario(l){
     ${fuera?`<span class="suave">${fuera} piezas en otras semanas</span>`:""}</div>
    <div class="semana">${dias.map(d=>{const f=fechaLocal(d),c=l.filter(x=>(x.p.fecha||"").startsWith(f));
     return`<div class="dia-c ${f==hoy?"hoy":""}"><h3>${cap(d.toLocaleDateString("es-PE",{weekday:"short"}).replace(".",""))} <span>${d.getDate()} · ${c.length}</span></h3>${c.map(x=>`<div class="mini" onclick="abrirEditor('${x.p.id}')">${portada(x.p)}
-     <div class="t"><b>${(x.p.fecha||"").slice(11,16)}</b><span class="cod">${esc(x.p.codigo)}</span><div class="fila" style="gap:4px;margin-top:2px">${redesMini(x.redes)}<span class="est-c ${x.est[0]}">${x.est[1]}</span></div></div></div>`).join("")}</div>`}).join("")}</div>
+     <div class="t"><b>${(x.p.fecha||"").slice(11,16)}</b><span class="cod">${esc(x.p.codigo)}</span><div class="fila" style="gap:4px;margin-top:2px">${redesMini(x.redes)}${tagCuenta(x)}<span class="est-c ${x.est[0]}">${x.est[1]}</span></div></div></div>`).join("")}</div>`}).join("")}</div>
    ${sinFecha.length?`<div class="sec-t"><h2>Sin fecha</h2><span class="etq">${sinFecha.length}</span></div><div class="semana" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">${sinFecha.map(x=>`<div class="mini" onclick="abrirEditor('${x.p.id}')">${portada(x.p)}<div class="t"><span class="cod">${esc(x.p.codigo)}</span>${redesMini(x.redes)}</div></div>`).join("")}</div>`:""}`}
 /* ---------- Editor lateral de borradores ---------- */
 function abrirEditor(id){const p=E.cola.publicaciones.find(x=>x.id==id);if(!p)return;
@@ -961,7 +983,7 @@ function pintarEditor(todo){
       <div class="fila"><label class="interruptor"><input type="checkbox" ${r.activa?"checked":""} onchange="ed.borr.${k}.activa=this.checked;ed.sucio=true;pintarEditor(true)"><span class="riel"></span>Publicar en ${REDES[k]?.[1]||k}</label>
        ${orig.url?`<a class="btn sec chico" href="${esc(orig.url)}" target="_blank" style="margin-left:auto">${ic("ojo")}Ver publicada</a>`:""}</div>
       ${cs.length?(salio?`<div class="suave">Salió en: <b>${esc(orig.cuenta_nombre||cs.find(c=>c.id==(orig.cuenta||def))?.nombre||"")}</b></div>`:
-        `<label class="campo">${QUE_CUENTA[k]}<select onchange="ed.borr.${k}.cuenta=this.value;ed.sucio=true">${cs.map(c=>`<option value="${esc(c.id)}" ${c.id==(r.cuenta||def)?"selected":""}>${esc(c.nombre)}${c.defecto?" (por defecto)":""}</option>`).join("")}</select></label>`):""}
+        `<label class="campo">${QUE_CUENTA[k]}<select onchange="ed.borr.${k}.cuenta=this.value;ed.sucio=true${k=="tiktok"?";pintarEditor(true)":""}">${cs.map(c=>`<option value="${esc(c.id)}" ${c.id==(r.cuenta||def)?"selected":""}>${esc(c.nombre)}${c.defecto?" (por defecto)":""}</option>`).join("")}</select></label>`):""}
       ${k=="tiktok"&&E.config.tiktok_modo=="directo"&&p.tipo=="video"?panelTikTok(r,salio):""}
       ${k=="youtube"?`<label class="campo">Título del Short<input value="${esc(r.titulo)}" maxlength="100" oninput="ed.borr.youtube.titulo=this.value;ed.sucio=true;$('#pv-tit').textContent=this.value;cont(this,100,'c-tit')"><span class="contador" id="c-tit">${(r.titulo||"").length} / 100</span></label>`:""}
       <label class="campo">Copy${k=="tiktok"&&E.config.tiktok_modo=="borrador"?' <span class="suave" style="font-weight:400">· en modo borrador lo pegas tú al publicar desde el celular</span>':""}
@@ -1026,7 +1048,8 @@ async function publicarEditor(){await guardarEditor(true);await publicar(ed.id)}
 async function importar(){const ruta=$("#ruta").value.trim();if(!ruta){toast("Pega primero la ruta de la carpeta","mal");$("#ruta").focus();return}
   const r=await api("/api/importar",{ruta});toast(`Entraron ${r.nuevas} piezas nuevas${r.repetidas?` (${r.repetidas} ya estaban)`:""}`,"ok");cargar()}
 /* para aprobar: al menos una red prendida y día y hora de salida */
-const faltaAprobar=(redes,fecha)=>!Object.values(redes).some(r=>r.activa)?"Para aprobar, prende al menos una red en esta pieza.":!fecha?"Para aprobar, ponle día y hora de salida.":"";
+const faltaAprobar=(redes,fecha)=>!Object.values(redes).some(r=>r.activa)?"Para aprobar, prende al menos una red en esta pieza.":!fecha?"Para aprobar, ponle día y hora de salida."
+  :redes.tiktok?.activa&&E.config.tiktok_modo=="directo"&&!redes.tiktok.ajustes_tiktok?.privacidad?"Para aprobar, elige en la pestaña TikTok quién puede ver el video.":"";
 async function cambiar(id,c){const p=E.cola.publicaciones.find(x=>x.id==id),f=c.aprobado&&p&&faltaAprobar(p.redes,p.fecha);if(f){toast(f,"mal");return abrirEditor(id)}
   await api(`/api/pub/${id}/cambiar`,c);if(c.aprobado)toast("Aprobada. Saldrá sola a su hora.","ok");cargar()}
 async function publicar(id,red){
@@ -1168,9 +1191,11 @@ async function copiarTxt(t,b){try{await navigator.clipboard.writeText(t)}catch(e
 
 /* ---------- Conexiones ---------- */
 const QUE_CUENTA={instagram:"Cuenta",facebook:"Página",tiktok:"Cuenta",youtube:"Canal"};
-const META_AYUDA="«Conectar con Facebook» trae todas las páginas que administras y el Instagram de cada una. Para sumar las de otra persona, que ella toque el botón y entre con su Facebook.";
+/* conectar se abre en el navegador (no dentro del Publicador): ahí puedes cambiar de cuenta o cerrar sesión para sumar otra */
+const META_AYUDA="«Conectar con Facebook» abre tu navegador y trae todas las páginas que administras y el Instagram de cada una. Para sumar las de otra persona, cierra la sesión de Facebook en el navegador y que ella entre con la suya.";
 const AYUDA={instagram:META_AYUDA+" El Instagram tiene que ser de empresa o creador y estar unido a una página.",facebook:META_AYUDA,
-  tiktok:"Al conectar entras con tu TikTok. Para sumar otra cuenta, primero cierra sesión en tiktok.com y luego pulsa «Agregar cuenta».",youtube:"Al conectar, Google te deja elegir el canal. Repite para sumar otro canal."};
+  tiktok:"Se abre tu navegador y conecta la cuenta con la que estés en tiktok.com. Para sumar otra cuenta, en tiktok.com cambia a esa cuenta (o cierra sesión) y pulsa «Agregar cuenta». Mientras la app de TikTok esté en Sandbox, cada cuenta tiene que estar agregada como usuario de prueba.",
+  youtube:"Se abre tu navegador y Google te deja elegir la cuenta y el canal. Repite para sumar otro canal. Mientras la app de Google esté en modo Prueba, cada cuenta tiene que estar en «Usuarios de prueba» y el permiso vence a los 7 días."};
 /* «Qué falta» en palabras (las versiones viejas del servidor mandan el nombre de la llave) */
 const LLAVE_DE={META:"Meta",TIKTOK:"TikTok",GOOGLE:"YouTube",google_client_secret:"YouTube"};
 const esLlave=f=>/^[A-Z_]+$|\.json$/.test(f);
@@ -1185,7 +1210,7 @@ function conexiones(){
      ${cs?.length?`<div class="cuentas">${cs.map(a=>`<div class="cuenta-f"><span class="nom" title="${esc(a.nombre)}">${esc(a.nombre)}</span>${a.defecto?'<span class="est simulado">Por defecto</span>':`<button class="btn fant chico" onclick="api('/api/${k}/defecto',{id:'${esc(a.id)}'}).then(cargar)" title="Usar por defecto" aria-label="Usar ${esc(a.nombre)} por defecto">${ic("estrella")}</button>`}
        <button class="btn fant chico" onclick="quitarCuenta('${k}','${esc(a.id)}','${esc(a.nombre).replace(/'/g,"")}')" aria-label="Quitar ${esc(a.nombre)}" title="Quitar">${ic("x")}</button></div>`).join("")}</div>`:""}
      <p class="suave" style="margin:0">${AYUDA[k]}</p>
-     ${oauth?`<div><a class="btn ${cs?.length?"sec":"prim"}" href="${url}">${ic(cs?.length?"mas":"conexiones")}${cs?.length?agregar:conectar}</a></div>`:""}</div>`};
+     ${oauth?`<div><a class="btn ${cs?.length?"sec":"prim"}" href="${url}" target="_blank" rel="noopener" onclick="toast('Se abrió tu navegador: entra con la cuenta que quieres sumar y vuelve aquí. Aparece sola.')">${ic(cs?.length?"mas":"conexiones")}${cs?.length?agregar:conectar}</a></div>`:""}</div>`};
   $("#main").innerHTML=`<div class="titulo-pag"><div><h1>Conexiones y ajustes</h1><p>Conecta las redes una vez. Las claves se guardan en tu PC, en <code>credenciales.env</code>.</p></div></div>
   <div class="caja" style="border-color:${cfg.simular?"var(--borde)":"var(--naranja-fuerte)"}"><div class="fila"><label class="interruptor"><input type="checkbox" ${cfg.simular?"checked":""} onchange="simular(this.checked)"><span class="riel"></span>Modo simulación</label>
    <span class="suave">${cfg.simular?"Prendido: anota lo que haría, pero no sube nada ni gasta.":"<b style='color:var(--naranja-fuerte)'>Apagado: lo aprobado se sube de verdad a su hora.</b>"}</span></div></div>

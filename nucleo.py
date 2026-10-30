@@ -15,7 +15,20 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
-PUBLICACION = Path(os.environ.get("PUBLICADOR_DATOS") or AQUI.parent)   # 2_PUBLICACION o datos/ del portable
+def _carpeta_datos():
+    """2_PUBLICACION o datos/ del instalado. Si en datos/ hay un usar_datos_de.txt con otra carpeta que tiene las
+    llaves (credenciales.env), se usa esa: así el instalado y el portable comparten llaves, tokens y cola."""
+    base = Path(os.environ.get("PUBLICADOR_DATOS") or AQUI.parent)
+    try:
+        otra = Path((base / "usar_datos_de.txt").read_text(encoding="utf-8").strip().strip('"'))
+        if (otra / "credenciales.env").is_file():
+            return otra
+    except OSError:
+        pass
+    return base
+
+
+PUBLICACION = _carpeta_datos()
 PUBLICACION.mkdir(parents=True, exist_ok=True)
 VERSION = (AQUI / "VERSION").read_text(encoding="utf-8").strip() if (AQUI / "VERSION").exists() else "0.0.0"
 CREDENCIALES = PUBLICACION / "credenciales.env"
@@ -135,8 +148,9 @@ CONFIG_DEFECTO = {
     "graph_version": "v23.0",
     "horarios_video": ["09:00", "12:00", "15:00", "18:00", "21:00"],
     "horario_carrusel": "13:00",
-    # sugerencias diarias: videos por cuenta al día, entre qué horas, cuentas que no reciben y días de aire por cuerpo
-    "sugeridor": {"por_dia": 10, "desde": "08:00", "hasta": "22:00", "apagados": [], "aire_cuerpo": 2},
+    # sugerencias diarias: videos por cuenta al día, entre qué horas, cuentas que no reciben, días de aire por cuerpo
+    # y días que espera un video antes de salir en otra cuenta de la misma red
+    "sugeridor": {"por_dia": 10, "desde": "08:00", "hasta": "22:00", "apagados": [], "aire_cuerpo": 2, "entre_cuentas": 1},
     "youtube_cuenta": None,         # id del canal de YouTube por defecto
     "facebook_cuenta": None,        # id de la página de Facebook por defecto (hay varias en tokens.json → meta_paginas)
     "instagram_cuenta": None,       # id de la cuenta de Instagram por defecto
@@ -238,16 +252,23 @@ def estrategia():
     return PUBLICACION / "0_ESTRATEGIA"
 
 
+_briefs = {"cuando": 0, "por_semana": {}}
+
+
 def brief_de(semana):
-    """El brief de la semana: el de _SEMANAS en Drive (lo que ven las salas) o el de 0_ESTRATEGIA en esta PC."""
+    """El brief de la semana: el de _SEMANAS en Drive (lo que ven las salas) o el de 0_ESTRATEGIA en esta PC.
+    Se leen todos juntos cada 30 s (antes se leían una vez por cada pieza de la cola)."""
     if not semana:
         return {}
-    import salas
-    for b in [*salas.briefs(), *sorted(estrategia().glob("semanas/*/brief.json"))]:
-        d = leer_json(b, {})
-        if d.get("semana") == semana:
-            return d
-    return {}
+    if time.time() - _briefs["cuando"] > 30:
+        import salas
+        por_semana = {}
+        for b in [*salas.briefs(), *sorted(estrategia().glob("semanas/*/brief.json"))]:
+            d = leer_json(b, {})
+            if d.get("semana"):
+                por_semana.setdefault(d["semana"], d)   # el de Drive gana
+        _briefs.update(cuando=time.time(), por_semana=por_semana)
+    return _briefs["por_semana"].get(semana) or {}
 
 
 def datos_de_semana(semana, cuerpo=None):
@@ -305,6 +326,21 @@ def guardar_cola(c):
 
 def buscar(c, pid):
     return next((p for p in c["publicaciones"] if p["id"] == pid), None)
+
+
+def partes_codigo(codigo):
+    """Cuerpo, hook y CTA que dice el nombre de un video: «S03-C1-H2-CTA1» → ("C1", "H2", "CTA1").
+    Los de la sesión 13/10 se llaman «P2H1» o «P6 H1»: la parte 2 es el cuerpo C2 (el «P04» de una producción no cuenta)."""
+    codigo = (codigo or "").strip()
+    c = re.search(r"(?:^|[-_ ])C(\d+)(?=[-_ ]|$)", codigo, re.I)
+    h = re.search(r"(?:^|[-_ ])H(\d+)(?=[-_ ]|$)", codigo, re.I)
+    t = re.search(r"(?:^|[-_ ])(CTA\w*?)(?=[-_ ]|$)", codigo, re.I)
+    cuerpo, hook = (f"C{int(c.group(1))}" if c else None), (f"H{int(h.group(1))}" if h else None)
+    if not c:
+        p = re.search(r"(?:^|[-_ ])P([1-9]\d?)[-_ ]?H(\d+)(?=[-_ ]|$)", codigo, re.I)
+        if p:
+            cuerpo, hook = f"C{int(p.group(1))}", f"H{int(p.group(2))}"
+    return cuerpo, hook, (t.group(1).upper() if t else None)
 
 
 def _datos_del_codigo(codigo):
@@ -452,6 +488,9 @@ def cambiar(pid, cambios):
                 raise ValueError("No se puede aprobar: prende al menos una red para esta pieza")
             if not re.match(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", p.get("fecha") or ""):
                 raise ValueError("No se puede aprobar: ponle día y hora de salida")
+            tt = p["redes"].get("tiktok") or {}
+            if tt.get("activa") and config()["tiktok_modo"] == "directo" and not (tt.get("ajustes_tiktok") or {}).get("privacidad"):
+                raise ValueError("No se puede aprobar: elige en TikTok quién puede ver el video")
             p["avisos"] = revisar_copy(p)
             prohibidas = [a for a in p["avisos"] if "pide evitar" in a]
             if prohibidas:
@@ -468,11 +507,16 @@ def borrar(pid):
 
 
 def guardar_copy_final(p):
-    """Deja el copy final que salió a cada red en 2_PUBLICACION/copies/<semana>/<codigo>.json."""
+    """Deja el copy final que salió a cada red en 2_PUBLICACION/copies/<semana>/<codigo>.json, uno por red y cuenta
+    («tiktok:<cuenta>»): el mismo video en tres cuentas de TikTok deja los tres copies, no solo el último."""
     if p.get("semana"):
-        escribir_json(COPIES / p["semana"] / f"{p['codigo']}.json",
-                      {red: {k: r.get(k) for k in ("copy", "titulo", "id_remoto", "url", "publicado")}
-                       for red, r in p["redes"].items() if r.get("activa")})
+        ruta = COPIES / p["semana"] / f"{p['codigo']}.json"
+        datos = leer_json(ruta, {})
+        for red, r in p["redes"].items():
+            if r.get("activa"):
+                datos[f"{red}:{r['cuenta']}" if r.get("cuenta") else red] = {
+                    k: r.get(k) for k in ("copy", "titulo", "id_remoto", "url", "publicado", "cuenta_nombre")}
+        escribir_json(ruta, datos)
 
 
 # ---------- Publicar ----------
@@ -486,7 +530,7 @@ def publicar(pid, red):
         if not p or red not in p["redes"]:
             return None   # la borraron mientras esperaba
         r = p["redes"][red]
-        if r.get("estado") != "pendiente":   # ya está subiendo, ya salió o hay que revisarla antes
+        if r.get("estado") != "pendiente" or not r.get("activa"):   # ya está subiendo, ya salió, hay que revisarla o no va
             return r
         r.update(estado="publicando", inicio=datetime.now().isoformat(timespec="seconds"))
         guardar_cola(c)
@@ -622,6 +666,9 @@ def recoger_metricas(semana=None):
                 cuentas[red] = con.cuentas()
             except Exception as e:
                 anotar(f"Cuenta {red}: {e}")
+    if not por_semana and cuentas:   # aún no hay piezas publicadas: igual quedan los números de cada cuenta
+        import salas
+        por_semana[salas.semana_de(datetime.now().date())] = []
     for sem, filas in por_semana.items():
         escribir_json(METRICAS / f"{sem}.json", {"semana": sem, "recogido": datetime.now().isoformat(timespec="minutes"),
                                                 "cuentas": cuentas, "piezas": filas})

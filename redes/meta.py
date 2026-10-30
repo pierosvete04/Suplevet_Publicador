@@ -258,6 +258,10 @@ class Instagram:
     def estado(self):
         return _estado("instagram")
 
+    def cuenta_de(self, red):
+        """La cuenta de una pieza (o la de por defecto): {id, nombre}, para anotarla también en simulación."""
+        return cuenta_de("instagram", red)
+
     def cuentas(self):
         return _foto_de_cuenta("instagram")
 
@@ -300,6 +304,10 @@ class Instagram:
 class Facebook:
     def estado(self):
         return _estado("facebook")
+
+    def cuenta_de(self, red):
+        """La cuenta de una pieza (o la de por defecto): {id, nombre}, para anotarla también en simulación."""
+        return cuenta_de("facebook", red)
 
     def cuentas(self):
         return _foto_de_cuenta("facebook")

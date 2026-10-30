@@ -215,8 +215,11 @@ class Manejador(BaseHTTPRequestHandler):
                 con = {"tiktok": tiktok, "google": youtube, "meta": meta}[u.path.rsplit("/", 1)[-1]]
                 c = con.recibir_codigo(q.get("code", ""), q.get("state", ""))
                 nucleo.anotar(f"Conectado {u.path.rsplit('/', 1)[-1]}" + (f" · {c['nombre']}" if isinstance(c, dict) and c.get("nombre") else ""))
-                return self._html(pagina("Listo, cuenta conectada", "Ya puedes cerrar esta pestaña. Te llevo de vuelta al Publicador…",
-                                         "<script>setTimeout(()=>location='/',1500)</script>"))
+                nombre = c.get("nombre") if isinstance(c, dict) else None
+                return self._html(pagina("Listo, cuenta conectada", (f"Se conectó «{nombre}». " if nombre else "")
+                                         + "Ya puedes cerrar esta pestaña y volver al Publicador: la cuenta aparece sola en "
+                                         "Conexiones.\n\nPara sumar otra cuenta de la misma red, cambia de cuenta en este "
+                                         "navegador (o cierra sesión en la red) y pulsa otra vez «Agregar»."))
             return self._json({"error": "no existe"}, 404)
         except Exception as e:
             traceback.print_exc()

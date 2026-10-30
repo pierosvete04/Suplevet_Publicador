@@ -5,6 +5,7 @@ Todas las redes se devuelven con la misma forma:
 Las portadas pasan por /img (se guardan en cache_img/) porque las URL de las redes vencen a las pocas horas.
 """
 import hashlib
+import re
 import struct
 import threading
 import time
@@ -90,11 +91,26 @@ def _iso(t):
 
 # ---------- Cada red ----------
 
-def _instagram():
+def _por_cuenta(cuentas, traer, errores):
+    """Trae cuenta por cuenta: si una falla (por ejemplo, venció su permiso), las demás de la misma red igual se ven."""
     out = []
-    for ig, cu in meta.cuentas_red("instagram").items():
-        out += _instagram_de(ig, meta.token_de("instagram", cu))
+    for cid, cu in cuentas.items():
+        try:
+            out += traer(cid, cu)
+        except Exception as e:
+            errores.append(f"«{cu.get('nombre') or cid}»: {_corto(e)}")
     return out
+
+
+def _corto(e):
+    t = str(e)
+    if re.search(r'"code":\s*190\b|access_token_invalid|invalid_grant|Invalid OAuth|invalid authentication|^401 ', t, re.I):
+        return "se venció o no vale el permiso: reconéctala en Conexiones"
+    return t[:200]
+
+
+def _instagram(errores):
+    return _por_cuenta(meta.cuentas_red("instagram"), lambda ig, cu: _instagram_de(ig, meta.token_de("instagram", cu)), errores)
 
 
 def _instagram_de(ig, tok):
@@ -124,11 +140,9 @@ def _instagram_de(ig, tok):
     return out
 
 
-def _facebook():
-    out = []
-    for pid, cu in meta.cuentas_red("facebook").items():
-        out += _facebook_de(pid, cu["nombre"], meta.token_de("facebook", cu))
-    return out
+def _facebook(errores):
+    return _por_cuenta(meta.cuentas_red("facebook"), lambda pid, cu: _facebook_de(pid, cu["nombre"], meta.token_de("facebook", cu)),
+                       errores)
 
 
 def _facebook_de(pid, nombre, tok):
@@ -151,43 +165,49 @@ def _facebook_de(pid, nombre, tok):
     return out
 
 
-def _tiktok():
+def _tiktok(errores):
+    return _por_cuenta(tiktok.cuentas(), _tiktok_de, errores)
+
+
+def _tiktok_de(oid, cu):
     out = []
-    for oid, cu in tiktok.cuentas().items():
-        r = pedir("POST", f"{tiktok.API}/video/list/?fields=id,title,cover_image_url,share_url,create_time,view_count,like_count,comment_count,share_count",
-                  cabeceras=tiktok._cab({"cuenta": oid}), json_={"max_count": 20})
-        for v in (r.get("data") or {}).get("videos", []):
-            out.append({"red": "tiktok", "cuenta": cu.get("nombre"), "id": v["id"], "clase": "video", "tipo": "Video",
-                        "img": v.get("cover_image_url"), "fotos": [v.get("cover_image_url")], "texto": v.get("title") or "",
-                        "link": v.get("share_url"), "fecha": _iso(v.get("create_time")), "es_video": True,
-                        "met": {"Vistas": v.get("view_count"), "Me gusta": v.get("like_count"),
-                                "Comentarios": v.get("comment_count"), "Compartidos": v.get("share_count")}})
+    r = pedir("POST", f"{tiktok.API}/video/list/?fields=id,title,cover_image_url,share_url,create_time,view_count,like_count,comment_count,share_count",
+              cabeceras=tiktok._cab({"cuenta": oid}), json_={"max_count": 20})
+    for v in (r.get("data") or {}).get("videos", []):
+        out.append({"red": "tiktok", "cuenta": cu.get("nombre"), "id": v["id"], "clase": "video", "tipo": "Video",
+                    "img": v.get("cover_image_url"), "fotos": [v.get("cover_image_url")], "texto": v.get("title") or "",
+                    "link": v.get("share_url"), "fecha": _iso(v.get("create_time")), "es_video": True,
+                    "met": {"Vistas": v.get("view_count"), "Me gusta": v.get("like_count"),
+                            "Comentarios": v.get("comment_count"), "Compartidos": v.get("share_count")}})
     return out
 
 
-def _youtube():
+def _youtube(errores):
+    return _por_cuenta(youtube.cuentas(), _youtube_de, errores)
+
+
+def _youtube_de(cid, cu):
     out = []
-    for cid, cu in youtube.cuentas().items():
-        cab = youtube._cab({"cuenta": cid})
-        ch = pedir("GET", "https://www.googleapis.com/youtube/v3/channels", {"part": "contentDetails", "mine": "true"}, cabeceras=cab)
-        sube = (ch.get("items") or [{}])[0].get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
-        if not sube:
-            continue
-        pl = pedir("GET", "https://www.googleapis.com/youtube/v3/playlistItems",
-                   {"part": "contentDetails", "playlistId": sube, "maxResults": 24}, cabeceras=cab)
-        ids = [i["contentDetails"]["videoId"] for i in pl.get("items", [])]
-        if not ids:
-            continue
-        vs = pedir("GET", "https://www.googleapis.com/youtube/v3/videos", {"part": "snippet,statistics", "id": ",".join(ids)}, cabeceras=cab)
-        for v in vs.get("items", []):
-            sn, st = v.get("snippet", {}), v.get("statistics", {})
-            th = sn.get("thumbnails", {})
-            n = lambda k: int(st[k]) if k in st else None  # noqa: E731
-            img = (th.get("maxres") or th.get("high") or th.get("medium") or {}).get("url")
-            out.append({"red": "youtube", "cuenta": cu.get("nombre"), "id": v["id"], "clase": "video", "tipo": "Short",
-                        "img": img, "fotos": [img], "texto": sn.get("title") or "", "link": f"https://youtube.com/shorts/{v['id']}",
-                        "fecha": sn.get("publishedAt"), "es_video": True,
-                        "met": {"Vistas": n("viewCount"), "Me gusta": n("likeCount"), "Comentarios": n("commentCount")}})
+    cab = youtube._cab({"cuenta": cid})
+    ch = pedir("GET", "https://www.googleapis.com/youtube/v3/channels", {"part": "contentDetails", "mine": "true"}, cabeceras=cab)
+    sube = (ch.get("items") or [{}])[0].get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
+    if not sube:
+        return out
+    pl = pedir("GET", "https://www.googleapis.com/youtube/v3/playlistItems",
+               {"part": "contentDetails", "playlistId": sube, "maxResults": 24}, cabeceras=cab)
+    ids = [i["contentDetails"]["videoId"] for i in pl.get("items", [])]
+    if not ids:
+        return out
+    vs = pedir("GET", "https://www.googleapis.com/youtube/v3/videos", {"part": "snippet,statistics", "id": ",".join(ids)}, cabeceras=cab)
+    for v in vs.get("items", []):
+        sn, st = v.get("snippet", {}), v.get("statistics", {})
+        th = sn.get("thumbnails", {})
+        n = lambda k: int(st[k]) if k in st else None  # noqa: E731
+        img = (th.get("maxres") or th.get("high") or th.get("medium") or {}).get("url")
+        out.append({"red": "youtube", "cuenta": cu.get("nombre"), "id": v["id"], "clase": "video", "tipo": "Short",
+                    "img": img, "fotos": [img], "texto": sn.get("title") or "", "link": f"https://youtube.com/shorts/{v['id']}",
+                    "fecha": sn.get("publishedAt"), "es_video": True,
+                    "met": {"Vistas": n("viewCount"), "Me gusta": n("likeCount"), "Comentarios": n("commentCount")}})
     return out
 
 
@@ -201,12 +221,13 @@ def todas(forzar=False):
             return _memo["datos"]
         piezas, errores = [], {}
         for red, f in FUENTES.items():
+            malas = []
             try:
-                piezas += f()
-            except ErrorRed as e:
-                errores[red] = str(e)[:300]
+                piezas += f(malas)
             except Exception as e:  # una red caída no frena a las demás
-                errores[red] = f"{type(e).__name__}: {e}"[:300]
+                malas.append(f"{type(e).__name__}: {e}"[:300])
+            if malas:
+                errores[red] = " · ".join(malas)
         # Las fotos necesitan su medida real; los videos de estas redes son verticales
         with ThreadPoolExecutor(8) as ex:
             rutas = dict(zip([p["img"] for p in piezas], ex.map(lambda u: bajar(u) if u else None, [p["img"] for p in piezas])))

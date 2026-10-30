@@ -221,8 +221,15 @@ class TikTok:
         cuenta = cuenta_de(red)
         red["cuenta"], red["cuenta_nombre"] = cuenta["open_id"], cuenta.get("nombre")
         if cfg["tiktok_modo"] == "directo":
-            d = _revisar(pedir("POST", f"{API}/post/publish/video/init/", cabeceras=_cab(red), json_={
-                "post_info": _post_info(red), "source_info": fuente}))
+            try:
+                d = _revisar(pedir("POST", f"{API}/post/publish/video/init/", cabeceras=_cab(red), json_={
+                    "post_info": _post_info(red), "source_info": fuente}))
+            except ErrorRed as e:
+                if "unaudited_client_can_only_post_to_private_accounts" in str(e):
+                    raise ErrorRed("TikTok todavía no aprobó la app: en modo Directo solo deja publicar en cuentas privadas. "
+                                   "Usa el modo Borrador (Conexiones › Cómo sube a TikTok) o pon la cuenta en privado "
+                                   "mientras tanto.") from None
+                raise
         else:
             d = _revisar(pedir("POST", f"{API}/post/publish/inbox/video/init/", cabeceras=_cab(red),
                                json_={"source_info": fuente}))
