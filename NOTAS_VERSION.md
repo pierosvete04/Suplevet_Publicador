@@ -1,3 +1,17 @@
+## 1.12.0 · Copies que dicen lo que tienen que decir
+
+- **Todo copy nombra el producto**: si el cuerpo no deja beneficios (los de P04 con una sola frase), se agrega «🐾 Suplevet: suplemento en polvo que mezclas con su comida.». También en TikTok.
+- **Título de YouTube del guionista**: si el guion trae `youtube_titulos` para ese hook, se usa tal cual; si no, el hook + #shorts como antes.
+- **Los CTA-A y CTA-O** del guionista se reconocen en el nombre del video y usan su cierre escrito (antes salía el cierre fijo).
+- **Público bien leído**: si el guion no dice si es para veterinarios o dueños (P04, P05), se mira el brief y, si tampoco, lo que dicen sus hooks y cuerpos. P05 ya sale con hashtags de veterinarios.
+- Un video sin cuerpo en el nombre («SUPLEVET H1») toma el cuerpo de número más bajo con ese hook (antes podía caer en C10).
+- **TOFU sin frases rotas**: al quitar «Suplevet» también sale la palabra de antes («…de tus pacientes con .» → «…de tus pacientes.»), también en el título.
+- Ya no aparece «?.» al final del cierre, y los ✅ no repiten lo que ya dice el texto del cuerpo.
+- **Variantes de verdad por cuenta**: además del emoji cambian el hook (escrito o como se dice en el video), el orden de los beneficios y el cierre; la variante 3 ya no sale igual a la 0.
+- El guion se busca por proyecto y sesión (dos proyectos con una sesión del mismo nombre ya no chocan) y, si no, por el proyecto.
+- **Palabras prohibidas más justas**: se usa la frase entera del brief («elimina la picazón» ya no frena cualquier «elimina»; «cura» no frena «curación»). «vainilla» queda prohibida siempre.
+- La primera línea que muestra Hoy es la misma que se guarda al pasar a la cola (también en piezas TOFU).
+
 ## 1.11.0 · Nada sale dos veces ni cuando no debe
 
 - **Nunca se publica dos veces.** Si Instagram, Facebook o YouTube publican y luego falla algo menor (pedir el enlace), la pieza queda «Publicada». Si la conexión se corta justo al publicar, queda en «Revisar» (mira en la red antes de reintentar), no en «Error».

@@ -279,12 +279,16 @@ def datos_de_semana(semana, cuerpo=None):
             "publico": cu.get("publico"), "desde": b.get("desde")}
 
 
+SIEMPRE_PROHIBIDAS = ["vainilla"]   # Suplevet se vende sin sabor: nunca nombrar la vainilla
+
+
 def palabras_prohibidas(semana):
-    """Palabras del brief (campo «evitar») que no pueden ir en el copy."""
-    out = []
+    """Palabras o frases del brief (campo «evitar») que no pueden ir en el copy. Se toma la frase entera, sin lo que
+    explica entre paréntesis o después de «como»: «elimina la picazón» frena esa frase, no cualquier «elimina»."""
+    out = list(SIEMPRE_PROHIBIDAS)
     for e in brief_de(semana).get("evitar", []):
-        p = re.split(r"[\s(]", e.strip(), maxsplit=1)[0].strip("«»\"'").lower()
-        if len(p) > 2:
+        p = re.split(r"\s*[(:—–]|\s+como\s+|\s+-\s+", e.strip(), maxsplit=1)[0].strip(" «»\"'.,;").lower()
+        if len(p) > 2 and len(p.split()) <= 4 and p not in out:
             out.append(p)
     return out
 
@@ -390,7 +394,7 @@ def partes_codigo(codigo):
     codigo = (codigo or "").strip()
     c = re.search(r"(?:^|[-_ ])C(\d+)(?=[-_ ]|$)", codigo, re.I)
     h = re.search(r"(?:^|[-_ ])H(\d+)(?=[-_ ]|$)", codigo, re.I)
-    t = re.search(r"(?:^|[-_ ])(CTA\w*?)(?=[-_ ]|$)", codigo, re.I)
+    t = re.search(r"(?:^|[-_ ])(CTA(?:[-_]?[A-Z0-9]+)?)(?=[-_ ]|$)", codigo, re.I)
     cuerpo, hook = (f"C{int(c.group(1))}" if c else None), (f"H{int(h.group(1))}" if h else None)
     if not c:
         p = re.search(r"(?:^|[-_ ])P([1-9]\d?)[-_ ]?H(\d+)(?=[-_ ]|$)", codigo, re.I)

@@ -334,7 +334,8 @@ def planear(desde=None, dias=1, excluir=(), forzar=False):
                     "portada": v["portada"], "mini": v.get("mini"), "bajado": v.get("bajado"),
                     "archivos": v["archivos"], "motivo": motivo,
                     "pronto": hace is not None and hace <= aire, "nuevo": nuevo,
-                    "gancho": (copys.generar(v, orden.index(d["clave"]) + int(dia[8:10]), transcribir=False)
+                    "gancho": (copys.generar(v, orden.index(d["clave"]) + int(dia[8:10]), transcribir=False,
+                                             nivel=v.get("nivel") or nucleo.datos_de_semana(v.get("semana"), produccion.cuerpo_de(v)).get("nivel"))
                                .get("instagram") or "").split("\n")[0]}
 
         # por rondas: una pieza por cuenta en cada vuelta, así ninguna se lleva todo lo nuevo

@@ -61,7 +61,9 @@ def _indice():
     import salas
     indice = {_clave(nombre): str(r) for nombre, r in salas.guiones().items()}   # los de Drive, lo mismo que la Sala
     for r in rutas:
-        indice.setdefault(_clave(Path(r).parent.parent.name if Path(r).parent.name == "Guion" else Path(r).parent.name), r)
+        sesion = Path(r).parent.parent if Path(r).parent.name == "Guion" else Path(r).parent
+        indice.setdefault(_clave(sesion.parent.name) + "|" + _clave(sesion.name), r)
+        indice.setdefault(_clave(sesion.name), r)
     # sesiones agrupadas en la Sala (11/10 + 13/10): todas usan el guion de la sesión que lo tiene
     grupos = salas.grupos() or nucleo.leer_json(PRODUCCION / "editor" / "grupos.json", {})
     for g in grupos.values():
@@ -76,8 +78,9 @@ def _indice():
 _guiones = {}
 
 
-def guion_de(prod):
-    r = _indice().get(_clave(prod))
+def guion_de(prod, proyecto=None):
+    ind = _indice()
+    r = (proyecto and ind.get(_clave(proyecto) + "|" + _clave(prod))) or ind.get(_clave(prod)) or (proyecto and ind.get(_clave(proyecto)))
     if not r:
         return None
     firma = Path(r).stat().st_mtime
@@ -93,11 +96,16 @@ def _ids(codigo, guion):
     cuerpo, h, tt = nucleo.partes_codigo(codigo)
     if cuerpo and cuerpo not in piezas:
         cuerpo = None
+    num = lambda k: int(re.match(r"C(\d+)", k).group(1)) if re.match(r"C\d+", k) else 999   # noqa: E731
     if not cuerpo and h:
-        cuerpo = next((k.split("_")[0] for k in piezas if re.fullmatch(rf"C\d+_{h}", k)), None)
-    cuerpo = cuerpo or next((k for k, v in piezas.items() if v.get("tipo") == "cuerpo"), None)
+        cuerpo = next((k.split("_")[0] for k in sorted(piezas, key=num) if re.fullmatch(rf"C\d+_{h}", k)), None)
+    cuerpo = cuerpo or next((k for k in sorted(piezas, key=num) if piezas[k].get("tipo") == "cuerpo"), None)
     hook = f"{cuerpo}_{h}" if h and cuerpo else None
-    cands = (f"{cuerpo}_{tt}", tt) if tt else (f"{cuerpo}_CTA", f"CTA{(cuerpo or '')[1:]}", "CTA")
+    if tt:   # «CTA-A» del nombre puede estar en el guion como «CTA-A» o «CTA_A»
+        alt = {tt, tt.replace("-", "_"), tt.replace("_", "-")}
+        cands = [f"{cuerpo}_{x}" for x in sorted(alt)] + sorted(alt)
+    else:
+        cands = (f"{cuerpo}_CTA", f"CTA{(cuerpo or '')[1:]}", "CTA")
     cta = next((k for k in cands if k in piezas or k in (guion.get("copies") or {}).get("ctas", {})), None)
     return cuerpo, hook, cta
 
@@ -198,6 +206,31 @@ def _corto(t, n=110):
     return t[:i] if i > 0 else _cortar(t, n)
 
 
+def _con_punto(t):
+    """Termina la frase con punto, salvo que ya termine en «?», «!», «.» o «…» (nada de «?.»)."""
+    t = t.strip()
+    return t if not t or t[-1] in "?!.…»\"" else t + "."
+
+
+def _sin_marca(t):
+    """Saca «Suplevet» de una frase (TOFU) sin dejarla rota: «… de tus pacientes con Suplevet.» → «… de tus pacientes.»"""
+    t = re.sub(r"\s*\b(?:con|de|a|y|por|en)?\s*suplevet\b", "", t, flags=re.I)
+    t = re.sub(r"\s+([.,;:?!])", r"\1", re.sub(r"\s{2,}", " ", t)).strip(" ,;:")
+    return t[:1].upper() + t[1:] if t else t
+
+
+def _publico(guion, pieza):
+    """B2B (veterinarios) o B2C (dueños): lo que diga el guion; si no lo dice, la pieza (del brief); si tampoco,
+    lo que dicen sus hooks y cuerpos."""
+    for x in (guion.get("publico"), pieza.get("publico")):
+        if x:
+            return "B2B" if re.search(r"veterin|b2b", str(x), re.I) else "B2C"
+    textos = " ".join(str(v.get("texto", "")) for v in (guion.get("piezas") or {}).values() if isinstance(v, dict))
+    vets = len(re.findall(r"\bveterinari|\bpacientes?\b|\bconsulta\b|\bcl[ií]nica\b", textos, re.I))
+    duenos = len(re.findall(r"\btu (?:perro|gato|mascota|peludo)\b", textos, re.I))
+    return "B2B" if vets > duenos else "B2C"
+
+
 def _tipo(t):
     return unicodedata.normalize("NFKD", (t or "").lower()).encode("ascii", "ignore").decode()
 
@@ -205,15 +238,18 @@ def _tipo(t):
 def generar(pieza, variante=0, transcribir=True, nivel=None):
     """{instagram, facebook, tiktok, youtube_titulo, youtube, fuente} para una pieza de Listos. Vacío si no hay de dónde."""
     codigo, prod = pieza.get("codigo") or "", pieza.get("produccion") or ""
-    guion = guion_de(prod)
+    guion = guion_de(prod, pieza.get("proyecto"))
     gancho, tipo, partes, cierre_guion, cierre_escrito, del_cuerpo, tags, publico = "", "", [], "", "", "", "", ""
+    hablado, titulo_guion = "", ""
     if guion:
         piezas, cps = guion.get("piezas", {}), guion.get("copies") or {}
         cuerpo, hook, cta = _ids(codigo, guion)
-        publico = "B2B" if "veterin" in (guion.get("publico") or "").lower() else "B2C"
+        publico = _publico(guion, pieza)
         if hook and hook in piezas:
             tipo = piezas[hook].get("tipo", "")
-            gancho = _texto((cps.get("hooks") or {}).get(hook)) or _sin_saludo(piezas[hook].get("texto", ""))
+            hablado = _sin_saludo(piezas[hook].get("texto", ""))
+            gancho = _texto((cps.get("hooks") or {}).get(hook)) or hablado
+            titulo_guion = _texto((cps.get("youtube_titulos") or {}).get(hook)).strip()
         pc = piezas.get(cuerpo) or {}
         partes = _clausulas(pc.get("texto") or " ".join(pc.get("partes") or []))
         if cta:
@@ -241,13 +277,17 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
     if not gancho and not partes:
         return {}
     v = variante
+    # cada variante cambia varias cosas a la vez (emoji, hook escrito o hablado, orden de beneficios, cierre) con
+    # ciclos de distinto largo, así la variante 3 no sale igual a la 0
     emojis = EMOJI.get(_tipo(tipo), EMOJI_DEF)
     em = emojis[v % len(emojis)]
+    if hablado and gancho != hablado and len(hablado) <= 160 and v % 2:
+        gancho = hablado                          # otra cuenta: el hook como se dice en el video
     if not gancho:
         gancho = _beneficio(partes[0])
     gancho = re.sub(r"\bsu\s+suplevet\b", "Suplevet", gancho.strip(), flags=re.I)
     if nivel == "TOFU" and "suplevet" in gancho.lower():      # TOFU: la marca no va en la primera línea
-        gancho = re.sub(r"\s*suplevet\s*", " ", gancho, flags=re.I).strip()
+        gancho = _sin_marca(gancho)
     primera = f"{em} {gancho}"
     # beneficios: las ideas que empiezan con «ayuda», «tiene»… (después de sacar «Y», «Suplevet»), enteras y cortas
     buenos = []
@@ -256,27 +296,36 @@ def generar(pieza, variante=0, transcribir=True, nivel=None):
             buenos.append(_corto(b))
     if not buenos and fuente == "guion":
         buenos = [_corto(_beneficio(f)) for f in partes[1:3] if not re.match(r"se llama", _beneficio(f), re.I)]
+    # lo que ya dice el copy escrito del cuerpo no se repite como ✅
+    bajo = del_cuerpo.lower()
+    buenos = [b for b in buenos if b.lower()[:30] not in bajo]
     if buenos:
         k = v % len(buenos)
         buenos = buenos[k:] + buenos[:k]           # otra cuenta, otro orden
     lista = "\n".join(f"✅ {b}" for b in buenos[:3])
-    # cierre: el CTA escrito del guion, o el que dice el video, o uno de siempre; nada si el copy del cuerpo ya lo trae
+    # sin beneficios ni nada que diga qué es: una línea fija con la marca (si no, el copy no nombra el producto)
+    if "suplevet" not in (lista + " " + del_cuerpo).lower():
+        lista = "\n".join(x for x in (lista, "🐾 Suplevet: suplemento en polvo que mezclas con su comida.") if x)
+    # cierre: nada si el copy del cuerpo ya lo trae; si no, va rotando entre el CTA escrito, el que dice el video y
+    # los de siempre (el escrito primero)
     if re.search(r"whatsapp|comenta|escr[ií]benos", del_cuerpo, re.I):
         cierre = ""
-    elif cierre_escrito:
-        cierre = cierre_escrito
-    elif cierre_guion:
-        cierre = f"{['👉', '📲', '👇'][v % 3]} {cierre_guion.rstrip('.')}."
     else:
-        cierres = CIERRE[publico or "B2C"]
-        cierre = cierres[v % len(cierres)]
+        cierres = [x for x in (cierre_escrito, _con_punto(f"{['👉', '📲', '👇'][v % 3]} {cierre_guion}") if cierre_guion else "") if x]
+        cierres += [c for c in CIERRE[publico or "B2C"] if not cierres or v % 4 >= 2]
+        cierre = cierres[(v // 2) % len(cierres)] if cierres else ""
     tags = tags or TAGS[publico or "B2C"]
     tags_l = tags.split()
     ig = "\n\n".join(x for x in (primera, lista, del_cuerpo, cierre, tags) if x)
     fb = "\n\n".join(x for x in (primera, lista, del_cuerpo, cierre, " ".join(tags_l[:3])) if x)
-    tt = "\n\n".join(x for x in (primera, del_cuerpo or (f"✅ {buenos[0]}" if buenos else ""), cierre, " ".join(tags_l[:5])) if x)
-    titulo = _cortar(re.sub(r"\s+", " ", gancho), 90)
-    titulo = f"{titulo} #shorts" if len(titulo) <= 91 else titulo
+    tt = "\n\n".join(x for x in (primera, del_cuerpo or (lista.split("\n")[0] if lista else ""), cierre, " ".join(tags_l[:5])) if x)
+    # título de YouTube: el que escribió el guionista para ese hook; si no hay, el hook (sin emoji) + #shorts
+    if titulo_guion:
+        titulo = _sin_marca(titulo_guion) if nivel == "TOFU" else titulo_guion
+        titulo = _cortar(titulo, 100)
+    else:
+        titulo = _cortar(re.sub(r"\s+", " ", gancho), 90)
+        titulo = f"{titulo} #shorts" if len(titulo) <= 91 else titulo
     yt = "\n\n".join(x for x in (gancho, lista, del_cuerpo, cierre, tags + " #shorts") if x)
     return {"instagram": ig, "facebook": fb, "tiktok": tt, "youtube_titulo": titulo, "youtube": yt, "fuente": fuente}
 
