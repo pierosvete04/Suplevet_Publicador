@@ -1,3 +1,8 @@
+## 1.13.0 · Cuenta nueva con marca
+
+- **Cuenta nueva con marca.** Al entrar por primera vez, después de elegir la carpeta, ahora hay un paso «Marca» (Entrar → Carpeta → Marca → Equipo): nombre de la marca, cómo te compran, qué vendes, a quién le vendes y dos colores. Se guarda una sola vez en el Drive del equipo y la ven las tres apps. Si la carpeta ya tiene marca, el paso no sale.
+- Si Google acepta pero no se puede leer tu correo (internet que se corta), la entrada ya no se pierde.
+
 ## 1.12.2 · Actualizar desde la pantalla de entrar
 
 - **La pantalla de entrar avisa si hay una versión nueva.** Antes el aviso salía solo después de entrar con Google, así que si entrar fallaba no había cómo recibir el arreglo. Ahora aparece «⟳ Hay una versión nueva» con el botón «Actualizar ahora» arriba de «Entrar con Google».
