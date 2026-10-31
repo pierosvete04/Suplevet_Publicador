@@ -1,3 +1,9 @@
+## 1.13.1 · Otra cuenta ya no termina usando la de antes
+
+- **Otra cuenta ya no termina usando la cuenta de antes.** Un proceso de Drive que había empezado antes de entrar podía volver a poner la llave de la cuenta anterior (la pantalla decía la cuenta nueva, pero se trabajaba con la vieja y se veían sus sesiones y su marca). Ahora cada entrada y cada cambio de carpeta guarda la llave aparte, y eso ya no puede pasar.
+- Cada 10 minutos la app confirma con Google con qué cuenta está trabajando, y esa es la que muestra.
+- Al entrar con otra cuenta ya no se ofrece «La de antes» (la carpeta de la cuenta anterior).
+
 ## 1.13.0 · Cuenta nueva con marca
 
 - **Cuenta nueva con marca.** Al entrar por primera vez, después de elegir la carpeta, ahora hay un paso «Marca» (Entrar → Carpeta → Marca → Equipo): nombre de la marca, cómo te compran, qué vendes, a quién le vendes y dos colores. Se guarda una sola vez en el Drive del equipo y la ven las tres apps. Si la carpeta ya tiene marca, el paso no sale.
