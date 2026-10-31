@@ -1,3 +1,9 @@
+## 1.12.1 · Entrar con Google sin quedarse trabado
+
+- **Entrar con Google ya no se queda trabado.** Si la página de Google no aparece (no se abrió, quedó detrás de la app o se cerró la pestaña), la pantalla de entrar muestra «¿No ves la página de Google?» con el link para copiar y los botones «Abrir Google otra vez» y «Cancelar».
+- Un intento de entrar que quedó esperando se corta al intentar de nuevo (antes ocupaba el puerto de Google y el nuevo se quedaba esperando detrás). Si pasan 10 minutos sin aceptar, se avisa y se puede volver a intentar.
+- Si otra de las tres apps ya está esperando a Google, se avisa con claridad.
+
 ## 1.12.0 · Copies que dicen lo que tienen que decir
 
 - **Todo copy nombra el producto**: si el cuerpo no deja beneficios (los de P04 con una sola frase), se agrega «🐾 Suplevet: suplemento en polvo que mezclas con su comida.». También en TikTok.
