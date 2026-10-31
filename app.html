@@ -1408,7 +1408,7 @@ let sucio=false;
 ["input","change"].forEach(t=>document.addEventListener(t,e=>{if(e.target.closest?.("#main [data-borrador]")&&!e.target.closest("[data-libre]"))sucio=true}));
 const escribiendo=()=>!!document.activeElement?.matches?.("textarea,input:not([type=checkbox]),select");
 setInterval(()=>{if(!escribiendo()&&!sucio&&tab!="pauta")cargar()},15000);
-(async()=>{await Cuenta.iniciar({app:"Publicador",letra:"P",fondo:"linear-gradient(135deg,#047857,#10b981 60%,#a3e635)",lugar:$("#cuentaChip"),alVolver:()=>location.reload(),menu:menuCuenta,version:()=>E?.version,alCambiarTema:cambiarTema,
+(async()=>{await Cuenta.iniciar({app:"Publicador",letra:"P",fondo:"linear-gradient(135deg,#047857,#10b981 60%,#a3e635)",lugar:$("#cuentaChip"),versionUrl:"/api/actualizacion",alVolver:()=>location.reload(),menu:menuCuenta,version:()=>E?.version,alCambiarTema:cambiarTema,
   preguntar:t=>preguntar("¿Seguro?",t),avisar:t=>toast(t,"mal")});
 cargar(true);revisarAct();setInterval(revisarAct,36e5)})();
 </script>

@@ -1,3 +1,7 @@
+## 1.12.2 · Actualizar desde la pantalla de entrar
+
+- **La pantalla de entrar avisa si hay una versión nueva.** Antes el aviso salía solo después de entrar con Google, así que si entrar fallaba no había cómo recibir el arreglo. Ahora aparece «⟳ Hay una versión nueva» con el botón «Actualizar ahora» arriba de «Entrar con Google».
+
 ## 1.12.1 · Entrar con Google sin quedarse trabado
 
 - **Entrar con Google ya no se queda trabado.** Si la página de Google no aparece (no se abrió, quedó detrás de la app o se cerró la pestaña), la pantalla de entrar muestra «¿No ves la página de Google?» con el link para copiar y los botones «Abrir Google otra vez» y «Cancelar».
