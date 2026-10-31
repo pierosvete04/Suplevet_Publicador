@@ -69,17 +69,22 @@ def espejos():
 
 
 def _buscar_espejos():
+    """Solo las de la carpeta elegida: con otra cuenta, la copia que dejó otra sala o el Drive para escritorio de
+    Suplevet mostraban (o publicaban) lo de la cuenta anterior."""
     out = []
     for c in nucleo.config().get("carpetas_produccion") or []:
         if c:
             out.append(Path(c))
-    for letra in "GHIJKLMNOPDEF":
-        out += [Path(f"{letra}:/.shortcut-targets-by-id/{DRIVE_ID}/EDICIÓN DE VIDEOS"),
-                Path(f"{letra}:/Mi unidad/EDICIÓN DE VIDEOS"), Path(f"{letra}:/My Drive/EDICIÓN DE VIDEOS")]
+    cid = _carpeta_elegida()
+    if not cid or cid == DRIVE_ID:
+        for letra in "GHIJKLMNOPDEF":
+            out += [Path(f"{letra}:/.shortcut-targets-by-id/{DRIVE_ID}/EDICIÓN DE VIDEOS"),
+                    Path(f"{letra}:/Mi unidad/EDICIÓN DE VIDEOS"), Path(f"{letra}:/My Drive/EDICIÓN DE VIDEOS")]
     local = Path(os.environ.get("LOCALAPPDATA") or Path.home())
-    out += [local / "SalaSuplevet" / "datos" / "drive", local / "SalaDiseno" / "datos" / "drive"]
     raiz = nucleo.PUBLICACION.parent      # REDES SOCIALES - SUPLEVET, cuando el publicador corre ahí
-    out += [raiz / "1_PRODUCCION" / "editor" / "drive", raiz / "1_PRODUCCION" / "editor" / "datos" / "drive"]
+    copias = [local / "SalaSuplevet" / "datos" / "drive", local / "SalaDiseno" / "datos" / "drive",
+              raiz / "1_PRODUCCION" / "editor" / "drive", raiz / "1_PRODUCCION" / "editor" / "datos" / "drive"]
+    out += [c for c in copias if not cid or _carpeta_de(c) == cid]   # las salas anotan de qué carpeta es su copia
     vistas, buenas = set(), []
     for c in out:
         try:
@@ -89,6 +94,84 @@ def _buscar_espejos():
         except OSError:
             pass
     return buenas
+
+
+# ---------- La copia local es de una sola carpeta de Drive ----------
+
+DE_QUE_CARPETA = ".sala/carpeta.txt"   # dentro de cada copia local (la de aquí y las de las salas): de qué carpeta es
+
+
+def _carpeta_elegida():
+    import cuenta
+    try:
+        return cuenta.estado().get("carpeta_id") or ""
+    except Exception:
+        return ""
+
+
+def _carpeta_de(copia):
+    try:
+        return (copia / DE_QUE_CARPETA).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def _anotar_carpeta_de_la_copia(cid):
+    try:
+        (CACHE / ".sala").mkdir(parents=True, exist_ok=True)
+        (CACHE / DE_QUE_CARPETA).write_text(cid, encoding="utf-8")
+    except OSError:
+        pass
+
+
+def revisar_copia_local():
+    """La llave y la copia local (<datos>/drive y drive_inventario.json) tienen que ser de la carpeta que eligió la
+    cuenta. Si son de otra (otra cuenta, otro proyecto), se apartan en <datos>/drive_<id> y vuelven las de la carpeta
+    nueva si ya se habían usado: así no se ve ni se publica lo de la otra (pasó el 30/10 con la Sala de edición: con la
+    cuenta de Mr Peanut se veían las sesiones de Suplevet). Devuelve True si cambió la copia."""
+    import cuenta
+    c = cuenta.estado()
+    if not c["conectado"] or not c["carpeta_id"]:
+        return False
+    ahora = c["carpeta_id"]
+    # una copia sin anotar (de antes de la 1.14) es de la carpeta con la que trabajaba rclone, no de la elegida. Si no
+    # se sabe cuál era, se supone la de Suplevet (la única antes de las cuentas); con otra carpeta, se aparta por si acaso
+    # y no vuelve sola (drive_sin_anotar)
+    apuntaba = cuenta.reparar_llave() or cuenta._leer(cuenta.INFO).get("llave_apuntaba")
+    de_la_copia = _carpeta_de(CACHE)
+    if not de_la_copia and (CACHE.exists() or INVENTARIO.exists()):
+        de_la_copia = apuntaba or (ahora if ahora == DRIVE_ID else "sin_anotar")
+    de_la_copia = de_la_copia or ahora
+    if de_la_copia != ahora:
+        _cambiar_copia_local(de_la_copia, ahora)
+    _anotar_carpeta_de_la_copia(ahora)
+    if de_la_copia == ahora:
+        return False
+    _memo.update(cuando=0, lista=None, fuente=None, error=None)
+    _espejos.update(cuando=0, lista=None)
+    nucleo.anotar(f"Drive: la copia local era de otra carpeta ({de_la_copia}): quedó aparte en drive_{de_la_copia}")
+    return True
+
+
+def _cambiar_copia_local(antes, ahora):
+    try:
+        aparte = nucleo.PUBLICACION / f"drive_{antes}"
+        if CACHE.exists() or INVENTARIO.exists():
+            if aparte.exists():   # una copia vieja de esa carpeta que quedó de antes: se guarda con otro nombre
+                aparte.rename(nucleo.PUBLICACION / f"drive_{antes}_{int(time.time())}")
+            if CACHE.exists():
+                CACHE.rename(aparte)
+            if INVENTARIO.exists():
+                (aparte / ".sala").mkdir(parents=True, exist_ok=True)
+                INVENTARIO.replace(aparte / ".sala" / INVENTARIO.name)
+        vuelve = nucleo.PUBLICACION / f"drive_{ahora}"
+        if vuelve.exists() and not CACHE.exists():
+            vuelve.rename(CACHE)
+            if (CACHE / ".sala" / INVENTARIO.name).exists():
+                (CACHE / ".sala" / INVENTARIO.name).replace(INVENTARIO)
+    except OSError as e:   # un video abierto (se está subiendo): se reintenta en la próxima lectura
+        raise RuntimeError("No pude apartar los archivos de la carpeta anterior: hay alguno abierto. Espera a que "
+                           "termine lo que se está publicando y vuelve a intentar.") from e
 
 
 def _en_pc(rel, tam=None):
@@ -157,6 +240,10 @@ def _sirve(rel):
 def inventario(forzar=False):
     """[{rel, tam, mod}] de lo que hay en Drive (guardado 3 minutos). Baja los archivos chicos que falten."""
     with _candado:
+        try:   # antes que nada: que la copia sea de la carpeta elegida (si se entró con otra cuenta, deja la lista vacía)
+            revisar_copia_local()
+        except Exception as e:
+            nucleo.anotar(f"Drive: {e}")
         if not forzar and _memo["lista"] is not None and time.time() - _memo["cuando"] < 180:
             return _memo["lista"]
         lista, fuente, error = None, "pc", None

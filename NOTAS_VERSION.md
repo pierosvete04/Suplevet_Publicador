@@ -1,3 +1,9 @@
+## 1.14.0 · Con otra cuenta no se ve nada de la anterior
+
+- **Con otra cuenta ya no se ve ni se publica nada de la cuenta anterior.** La llave de Google siempre trabaja con la carpeta que elegiste: si quedó apuntando a otra (pasó en una PC con la cuenta de Mr Peanut, que veía las sesiones de Suplevet), la app la arregla sola al abrir y cada 10 minutos.
+- Lo que se bajó de Drive a esta PC es de una sola carpeta. Si entras con otra cuenta, aunque sea desde otra de las tres apps, lo de la anterior se guarda aparte y deja de verse; si vuelves a esa cuenta, vuelve tal cual.
+- Los videos y láminas que ya están en la PC (en las copias de las salas o en Drive para escritorio) solo se usan si son de la misma carpeta.
+
 ## 1.13.2 · Menú de la cuenta más corto
 
 - **Menú de tu cuenta más corto:** solo «👤 Cuenta y dispositivos» y «⚙ Configuración». Configuración abre la página con todas las secciones (Actualizaciones incluida) y lleva un punto de aviso cuando hay una versión nueva.
