@@ -640,11 +640,11 @@ function pintarMenu(){
 function ir(k){tab=k;sucio=false;guardarLocal("tab",k);$("#main").innerHTML="";pintar();scrollTo(0,0)}
 /* el menú de tu cuenta (cuenta.js): las páginas de Configuración, igual que en las salas */
 function irConf(id){ir("configuracion");document.querySelectorAll(".conf-menu a").forEach(x=>x.classList.toggle("activo",x.getAttribute("href")=="#"+id));$("#"+id)?.scrollIntoView({block:"start"})}
+/* El menú de tu cuenta: solo «Cuenta y dispositivos» y «Configuración» (la página con todas las secciones; con versión nueva lleva el punto) */
 function menuCuenta(){const enConf=tab=="configuracion",act=document.querySelector(".conf-menu a.activo")?.getAttribute("href");
-  const p=$("#confPAct")?.className||"punto-estado";
+  const p=$("#confPAct"),aviso=p?.classList.contains("warn")?`<span class="${p.className}" title="Hay una versión nueva"></span>`:"";
   return[{icono:"👤",texto:"Cuenta y dispositivos",al:()=>irConf("confCuenta"),actual:enConf&&act=="#confCuenta"},
-    {icono:"🔌",texto:"Redes conectadas",al:()=>ir("conexiones"),actual:tab=="conexiones",extra:E?`<span class="pill-mini">${Object.values(E.conexiones||{}).filter(c=>c?.listo).length}/${Object.keys(REDES).length}</span>`:""},
-    {icono:"⟳",texto:"Actualizaciones",al:()=>irConf("confAct"),actual:enConf&&act=="#confAct",extra:`<span class="${p}"></span>`}]}
+    {icono:"⚙",texto:"Configuración",al:()=>irConf("confAct"),actual:enConf&&act!="#confCuenta",extra:aviso}]}
 
 /* ---------- Filtros comunes (Publicadas y Cola) ---------- */
 const FORMATOS=["9:16","4:5","1:1","16:9"],RATIO={"9:16":"9/16","4:5":"4/5","1:1":"1/1","16:9":"16/9"},FORMA={"9:16":[9,16],"4:5":[11,14],"1:1":[13,13],"16:9":[16,9]};
